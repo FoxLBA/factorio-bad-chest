@@ -7,6 +7,13 @@ local Y_SIGNAL = {name="signal-Y", type="virtual"}
 local WIDTH_SIGNAL = {name="signal-W", type="virtual"}
 local HEIGHT_SIGNAL = {name="signal-H", type="virtual"}
 local ROTATE_SIGNAL = {name="signal-R", type="virtual"}
+local NESTED_DEPLOY_SIGNALS = {DEPLOY_SIGNAL}
+for i = 1, 5 do
+    table.insert(
+        NESTED_DEPLOY_SIGNALS,
+        {name="recursive-blueprints-layer"..i, type="virtual"}
+    )
+end
 
 function deploy_blueprint(bp, network)
   if not bp then return end
@@ -115,18 +122,9 @@ function on_tick_deployer(network)
 
     -- Pick item from blueprint book
     if bp.is_blueprint_book then
-      local inventory = bp.get_inventory(defines.inventory.item_main)
-      if #inventory < 1 then return end
-      if deploy > #inventory then
-        deploy = bp.active_index
-      end
-      bp = inventory[deploy]
-      if not bp.valid_for_read then return end
+        bp = get_nested_blueprint(bp, network)
+        if not bp or not bp.valid_for_read then return end
     end
-
-    -- Pick active item from nested blueprint books
-    bp = get_nested_blueprint(bp)
-    if not bp or not bp.valid_for_read then return end
 
     if bp.is_blueprint then
       -- Deploy blueprint
@@ -305,9 +303,26 @@ function find_stack_in_container(entity, item_name)
   end
 end
 
-function get_nested_blueprint(bp)
-  if not bp then return end
-  if not bp.valid_for_read then return end
+function get_nested_blueprint(bp, network)
+  --if not bp then return end
+  --if not bp.valid_for_read then return end
+  --if not bp.is_blueprint_book then return end
+  
+  local book_slot = get_signal(network, NESTED_DEPLOY_SIGNALS[1])
+  local n = 1
+  while bp.is_blueprint_book and (book_slot > 0) and (n < 7) do
+    local inventory = bp.get_inventory(defines.inventory.item_main)
+    if #inventory < 1 then return end
+    if book_slot > #inventory then
+        book_slot = bp.active_index
+        n = 10 --Slot mismatch, ignore other indexes.
+    end
+    bp = inventory[book_slot]
+    if not bp.valid_for_read then return end
+    n = n + 1
+    if n < 7 then book_slot = get_signal(network, NESTED_DEPLOY_SIGNALS[n]) end
+  end
+
   while bp.is_blueprint_book do
     if not bp.active_index then return end
     bp = bp.get_inventory(defines.inventory.item_main)[bp.active_index]
