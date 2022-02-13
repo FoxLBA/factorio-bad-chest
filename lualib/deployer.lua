@@ -304,23 +304,25 @@ function find_stack_in_container(entity, item_name)
 end
 
 function get_nested_blueprint(bp, network)
-  --if not bp then return end
-  --if not bp.valid_for_read then return end
-  --if not bp.is_blueprint_book then return end
+  if not bp then return end
+  if not bp.valid_for_read then return end
   
-  local book_slot = get_signal(network, NESTED_DEPLOY_SIGNALS[1])
-  local n = 1
-  while bp.is_blueprint_book and (book_slot > 0) and (n < 7) do
-    local inventory = bp.get_inventory(defines.inventory.item_main)
-    if #inventory < 1 then return end
-    if book_slot > #inventory then
-        book_slot = bp.active_index
-        n = 10 --Slot mismatch, ignore other indexes.
+  if network then
+    local book_slot = get_signal(network, NESTED_DEPLOY_SIGNALS[1])
+    local n = 1
+    while bp.is_blueprint_book and (book_slot > 0) and (n < 7) do
+      local inventory = bp.get_inventory(defines.inventory.item_main)
+      if #inventory < 1 then return end
+      if book_slot > #inventory then
+          if not bp.active_index then return end
+          book_slot = bp.active_index
+          n = 10 --Slot mismatch, ignore other indexes.
+      end
+      bp = inventory[book_slot]
+      if not bp.valid_for_read then return end
+      n = n + 1
+      if n < 7 then book_slot = get_signal(network, NESTED_DEPLOY_SIGNALS[n]) end
     end
-    bp = inventory[book_slot]
-    if not bp.valid_for_read then return end
-    n = n + 1
-    if n < 7 then book_slot = get_signal(network, NESTED_DEPLOY_SIGNALS[n]) end
   end
 
   while bp.is_blueprint_book do
