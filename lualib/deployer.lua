@@ -127,7 +127,7 @@ function on_tick_deployer(network)
         inventory = bp.get_inventory(defines.inventory.item_main)
         if #inventory < 1 then return end -- Got an empty book, nothing to do
         deploy = get_signal(network, NESTED_DEPLOY_SIGNALS[i])
-        if (deploy == 0) or (deploy > #inventory) then break end -- Navigation is no longer applicable
+        if (deploy < 1) or (deploy > #inventory) then break end -- Navigation is no longer applicable
         bp = inventory[deploy]
         if not bp.valid_for_read then return end -- Got an empty slot
         if not bp.is_blueprint_book then break end
