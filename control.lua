@@ -1,4 +1,5 @@
 require "util"
+require "lualib.logging"
 require "lualib.common"
 require "lualib.deployer"
 require "lualib.scanner"
