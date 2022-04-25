@@ -132,7 +132,7 @@ function on_tick_deployer(network)
         if not bp.valid_for_read then return end -- Got an empty slot
         if not bp.is_blueprint_book then break end
       end
-      
+
       -- Pick active item from nested blueprint books
       bp = get_nested_blueprint(bp)
       if not bp or not bp.valid_for_read then return end

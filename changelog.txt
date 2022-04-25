@@ -4,6 +4,8 @@ Date: 2022-04-25
   Features:
     - Create fork.
     - Small internal fixes.
+    - Nested book navigation.
+    - BP deployer logging.
 ---------------------------------------------------------------------------------------------------
 Version: 1.2.6
 Date: 2022-02-24

@@ -32,7 +32,7 @@ function deployer_logging(msg_type, network, vars)
       return
     end
   end
-  
+
   local msg = ""
   local deployer_gps = make_gps_string(network.deployer.position, network.deployer.surface)
 
@@ -54,7 +54,7 @@ function deployer_logging(msg_type, network, vars)
     else
       sub_msg = " somefing: "
     end
-    if not vars.apply then sub_msg = " cansel" .. sub_msg end
+    if not vars.apply then sub_msg = " cancel" .. sub_msg end
     msg = "Deployer " .. deployer_gps ..
           sub_msg .. make_bp_name_string(vars.bp) ..
           " " .. target_gps .. make_area_string(network)
