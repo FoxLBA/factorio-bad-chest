@@ -7,6 +7,13 @@ local Y_SIGNAL = {name="signal-Y", type="virtual"}
 local WIDTH_SIGNAL = {name="signal-W", type="virtual"}
 local HEIGHT_SIGNAL = {name="signal-H", type="virtual"}
 local ROTATE_SIGNAL = {name="signal-R", type="virtual"}
+local NESTED_DEPLOY_SIGNALS = {DEPLOY_SIGNAL}
+for i = 1, 5 do
+    table.insert(
+        NESTED_DEPLOY_SIGNALS,
+        {name="signal-"..i, type="virtual"}
+    )
+end
 
 function deploy_blueprint(bp, network)
   if not bp then return end
@@ -115,18 +122,21 @@ function on_tick_deployer(network)
 
     -- Pick item from blueprint book
     if bp.is_blueprint_book then
-      local inventory = bp.get_inventory(defines.inventory.item_main)
-      if #inventory < 1 then return end
-      if deploy > #inventory then
-        deploy = bp.active_index
+      local inventory = nil
+      for i=1, 6 do
+        inventory = bp.get_inventory(defines.inventory.item_main)
+        if #inventory < 1 then return end -- Got an empty book, nothing to do
+        deploy = get_signal(network, NESTED_DEPLOY_SIGNALS[i])
+        if (deploy < 1) or (deploy > #inventory) then break end -- Navigation is no longer applicable
+        bp = inventory[deploy]
+        if not bp.valid_for_read then return end -- Got an empty slot
+        if not bp.is_blueprint_book then break end
       end
-      bp = inventory[deploy]
-      if not bp.valid_for_read then return end
+      
+      -- Pick active item from nested blueprint books
+      bp = get_nested_blueprint(bp)
+      if not bp or not bp.valid_for_read then return end
     end
-
-    -- Pick active item from nested blueprint books
-    bp = get_nested_blueprint(bp)
-    if not bp or not bp.valid_for_read then return end
 
     if bp.is_blueprint then
       -- Deploy blueprint
