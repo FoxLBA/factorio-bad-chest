@@ -38,13 +38,13 @@ function deployer_logging(msg_type, network, vars)
 
   --"point_deploy" "area_deploy" "self_deconstract" "destroy_book" "copy_book"
   if msg_type == "point_deploy" then
-    local target_gps  = " " .. make_gps_string(vars.position, network.deployer.surface)
+    local target_gps  = make_gps_string(vars.position, network.deployer.surface)
     if deployer_gps == target_gps then target_gps = "" end
     msg = "Deployer " .. deployer_gps ..
-          " place bp: " .. make_bp_name_string(vars.bp) .. target_gps
+          " place bp: " .. make_bp_name_string(vars.bp) .. " " ..  target_gps
 
   elseif msg_type == "area_deploy" then
-    local target_gps  = " " .. make_gps_string(get_target_position(network), network.deployer.surface)
+    local target_gps  = make_gps_string(get_target_position(network), network.deployer.surface)
     if deployer_gps == target_gps then target_gps = "" end
     local sub_msg = ""
     if vars.sub_type == "deconstract" then
@@ -57,7 +57,7 @@ function deployer_logging(msg_type, network, vars)
     if not vars.apply then sub_msg = " cansel" .. sub_msg end
     msg = "Deployer " .. deployer_gps ..
           sub_msg .. make_bp_name_string(vars.bp) ..
-          target_gps .. make_area_string(network)
+          " " .. target_gps .. make_area_string(network)
 
   else
     msg = "Deployer " .. deployer_gps .. " sent an unknown message: " .. msg_type
