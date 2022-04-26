@@ -16,7 +16,7 @@ Deploy blueprint from book. Construction robot signal selects which blueprint to
 
 ![Construction robot = 3](docs/nested_navigation.png)
 
-To select blueprint in books (which are also in the books), signals 1 to 5 indicate which slot to use at the corresponding nesting level. (Construction robot signal is considered as the zero layer)
+To select blueprint in book (which may also be in the book), signals 1 to 5 indicate which slot to use at the corresponding nesting level. (Construction robot signal is considered as the zero layer)
 
 ---
 
