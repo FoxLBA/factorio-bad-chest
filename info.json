@@ -6,5 +6,6 @@
   "homepage":"",
   "description":"Automate blueprints to build a self-expanding factory.\nFork of Recursive Blueprints with new small features.",
   "dependencies": ["base", "!recursive-blueprints"],
-  "factorio_version": "1.1"
+  "factorio_version": "1.1",
+  "package": {"ignore": ["README.md", "docs/*", "graphics/*.psd", "graphics/*.xcf"]}
 }
