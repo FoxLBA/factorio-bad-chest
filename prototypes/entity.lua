@@ -1,20 +1,20 @@
 -- Blueprint deployer
 local deployer = table.deepcopy(data.raw["container"]["steel-chest"])
 deployer.name = "blueprint-deployer"
-deployer.icon = "__recursive-blueprints__/graphics/blueprint-deployer-icon.png"
+deployer.icon = "__rec-blue-plus__/graphics/blueprint-deployer-icon.png"
 deployer.minable.result = "blueprint-deployer"
 deployer.inventory_size = 1
 deployer.enable_inventory_bar = false
 deployer.se_allow_in_space = true
 deployer.picture.layers = {
   {
-    filename = "__recursive-blueprints__/graphics/blueprint-deployer.png",
+    filename = "__rec-blue-plus__/graphics/blueprint-deployer.png",
     width = 32,
     height = 36,
     shift = util.by_pixel(0, -2),
     priority = "high",
     hr_version = {
-      filename = "__recursive-blueprints__/graphics/hr-blueprint-deployer.png",
+      filename = "__rec-blue-plus__/graphics/hr-blueprint-deployer.png",
       width = 66,
       height = 72,
       shift = util.by_pixel(0, -2.5),
@@ -70,7 +70,7 @@ data:extend{
       "hide-alt-info",
       "not-rotatable",
     },
-    icon = "__recursive-blueprints__/graphics/scanner-icon.png",
+    icon = "__rec-blue-plus__/graphics/scanner-icon.png",
     icon_mipmaps = 4,
     icon_size = 64,
     item_slot_count = 10,
@@ -81,13 +81,13 @@ data:extend{
     sprites = {
       layers = {
         {
-          filename = "__recursive-blueprints__/graphics/scanner.png",
+          filename = "__rec-blue-plus__/graphics/scanner.png",
           width = 69,
           height = 135,
           shift = util.by_pixel(0, -31),
           priority = "high",
           hr_version = {
-            filename = "__recursive-blueprints__/graphics/hr-scanner.png",
+            filename = "__rec-blue-plus__/graphics/hr-scanner.png",
             width = 138,
             height = 270,
             shift = util.by_pixel(0, -31),

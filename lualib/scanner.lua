@@ -547,7 +547,7 @@ function create_signal_gui(element)
     style = "entity_frame",
     direction = "horizontal",
   }
-  inner_frame.style.vertical_align = center
+  inner_frame.style.vertical_align = "center"
 
   -- Slider settings
   local maximum_value = 28  -- 10 * log(999)

@@ -7,6 +7,13 @@ local Y_SIGNAL = {name="signal-Y", type="virtual"}
 local WIDTH_SIGNAL = {name="signal-W", type="virtual"}
 local HEIGHT_SIGNAL = {name="signal-H", type="virtual"}
 local ROTATE_SIGNAL = {name="signal-R", type="virtual"}
+local NESTED_DEPLOY_SIGNALS = {DEPLOY_SIGNAL}
+for i = 1, 5 do
+    table.insert(
+        NESTED_DEPLOY_SIGNALS,
+        {name="signal-"..i, type="virtual"}
+    )
+end
 
 function deploy_blueprint(bp, network)
   if not bp then return end
@@ -24,19 +31,8 @@ function deploy_blueprint(bp, network)
     direction = defines.direction.west
   end
 
-  -- Shift x,y coordinates
-  local position = {
-    x = network.deployer.position.x + get_signal(network, X_SIGNAL),
-    y = network.deployer.position.y + get_signal(network, Y_SIGNAL),
-  }
-
-  -- Check for building out of bounds
-  if position.x > 1000000
-  or position.x < -1000000
-  or position.y > 1000000
-  or position.y < -1000000 then
-    return
-  end
+  local position = get_target_position(network)
+  if not position then return end
 
   -- Build blueprint
   local result = bp.build_blueprint{
@@ -54,6 +50,9 @@ function deploy_blueprint(bp, network)
       stack = bp,
     })
   end
+  deployer_logging("point_deploy", network,
+                   {bp = bp, position = position, direction = direction}
+                  )
 end
 
 function deconstruct_area(bp, network, deconstruct)
@@ -81,6 +80,10 @@ function deconstruct_area(bp, network, deconstruct)
       network.deployer.cancel_deconstruction(force)
     end
   end
+  deployer_logging("area_deploy", network,
+                   {sub_type = "deconstract", bp = bp,
+                    area = area, apply = deconstruct}
+                  )
 end
 
 function upgrade_area(bp, network, upgrade)
@@ -102,6 +105,10 @@ function upgrade_area(bp, network, upgrade)
       item = bp,
     }
   end
+  deployer_logging("area_deploy", network,
+                   {sub_type = "upgrade", bp = bp,
+                    area = area, apply = upgrade}
+                  )
 end
 
 function on_tick_deployer(network)
@@ -115,18 +122,21 @@ function on_tick_deployer(network)
 
     -- Pick item from blueprint book
     if bp.is_blueprint_book then
-      local inventory = bp.get_inventory(defines.inventory.item_main)
-      if #inventory < 1 then return end
-      if deploy > #inventory then
-        deploy = bp.active_index
+      local inventory = nil
+      for i=1, 6 do
+        inventory = bp.get_inventory(defines.inventory.item_main)
+        if #inventory < 1 then return end -- Got an empty book, nothing to do
+        deploy = get_signal(network, NESTED_DEPLOY_SIGNALS[i])
+        if (deploy < 1) or (deploy > #inventory) then break end -- Navigation is no longer applicable
+        bp = inventory[deploy]
+        if not bp.valid_for_read then return end -- Got an empty slot
+        if not bp.is_blueprint_book then break end
       end
-      bp = inventory[deploy]
-      if not bp.valid_for_read then return end
-    end
 
-    -- Pick active item from nested blueprint books
-    bp = get_nested_blueprint(bp)
-    if not bp or not bp.valid_for_read then return end
+      -- Pick active item from nested blueprint books
+      bp = get_nested_blueprint(bp)
+      if not bp or not bp.valid_for_read then return end
+    end
 
     if bp.is_blueprint then
       -- Deploy blueprint
@@ -163,6 +173,7 @@ function on_tick_deployer(network)
   elseif deconstruct == -2 then
     -- Deconstruct self
     network.deployer.order_deconstruction(network.deployer.force)
+    deployer_logging("self_deconstract", network, nil)
     return
   elseif deconstruct == -3 then
     -- Cancel deconstruction in area
@@ -185,6 +196,7 @@ function on_tick_deployer(network)
     or stack.is_upgrade_item
     or stack.is_deconstruction_item then
       stack.clear()
+      deployer_logging("destroy_book", network, nil)
     end
     return
   end
@@ -221,6 +233,27 @@ function get_area(network)
   }
 end
 
+function get_area_signals(network)
+  return get_signal(network, WIDTH_SIGNAL), get_signal(network, HEIGHT_SIGNAL)
+end
+
+function get_target_position(network)
+  -- Shift x,y coordinates
+  local position = {
+    x = network.deployer.position.x + get_signal(network, X_SIGNAL),
+    y = network.deployer.position.y + get_signal(network, Y_SIGNAL),
+  }
+
+  -- Check for building out of bounds
+  if position.x > 1000000
+  or position.x < -1000000
+  or position.y > 1000000
+  or position.y < -1000000 then
+    return
+  end
+  return position
+end
+
 function copy_blueprint(network)
   local inventory = network.deployer.get_inventory(defines.inventory.chest)
   if not inventory.is_empty() then return end
@@ -231,6 +264,7 @@ function copy_blueprint(network)
       local stack = find_stack_in_network(network.deployer, signal.name)
       if stack then
         inventory[1].set_stack(stack)
+        deployer_logging("copy_book", network, stack)
         return
       end
     end

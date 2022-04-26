@@ -14,6 +14,12 @@ Deploy blueprint from book. Construction robot signal selects which blueprint to
 
 ---
 
+![Construction robot = 3](docs/nested_navigation.png)
+
+To select blueprint in book (which may also be in the book), signals 1 to 5 indicate which slot to use at the corresponding nesting level. (Construction robot signal is considered as the zero layer)
+
+---
+
 ![Construction robot = 1](docs/construction-robot_3.jpg)
 
 Deconstruct or upgrade area. W = width, H = height. Supports deconstruction filters. The deployer chest will never deconstruct itself with this command.
@@ -57,6 +63,9 @@ R signal rotates the blueprint. R = 1 = 90° clockwise, R = 2 = 180°, R = 3 = 9
 To change the center of the blueprint, enable grid size (1x1 is recommended), and set an absolute reference point.
 
 Deconstruction and upgrades use X,Y as the center of the area. This can be changed to the top left corner of the area in mod settings.
+
+L signal is used to display debug messages (it is necessary to enable the trigger condition in the mod settings).
+Each activation will display in the chat the location of the triggered deployer, the name of the blueprint and the place where the blueprint is applied (if the offset is not zero)
 
 ---
 

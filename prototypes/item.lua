@@ -2,7 +2,7 @@ data:extend{
   {
     type = "item",
     name = "blueprint-deployer",
-    icon = "__recursive-blueprints__/graphics/blueprint-deployer-icon.png",
+    icon = "__rec-blue-plus__/graphics/blueprint-deployer-icon.png",
     icon_size = 64,
     icon_mipmaps = 4,
     subgroup = "logistic-network",
@@ -13,7 +13,7 @@ data:extend{
   {
     type = "item",
     name = "recursive-blueprints-scanner",
-    icon = "__recursive-blueprints__/graphics/scanner-icon.png",
+    icon = "__rec-blue-plus__/graphics/scanner-icon.png",
     icon_size = 64,
     icon_mipmaps = 4,
     subgroup = "circuit-network",

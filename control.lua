@@ -1,4 +1,5 @@
 require "util"
+require "lualib.logging"
 require "lualib.common"
 require "lualib.deployer"
 require "lualib.scanner"
@@ -88,7 +89,7 @@ end
 
 function on_tick()
   -- Check one deployer per tick for new circuit network connections
-  index = global.deployer_index
+  local index = global.deployer_index
   global.deployer_index = next(global.deployers, global.deployer_index)
   if global.deployers[index] then
     if global.deployers[index].valid then
