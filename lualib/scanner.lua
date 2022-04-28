@@ -23,6 +23,26 @@ local MILITARY_STRUCTURES = {
   ["unit-spawner"] = true,
 }
 
+local DEFAULT_SCANER_SETTINGS = {
+  show_ore = true,
+  show_trees_and_rocks = true, -- and fish
+  show_buildings = false,
+  show_ghosts = false,
+  show_items_on_ground = false,
+  counters = {
+    uncharted   = {is_shown = true, signal = {name="signal-black", type="virtual"}, is_negative = false},
+    cliffs      = {is_shown = true, signal = {name="cliff-explosives", type="item"}, is_negative = true},
+    targets     = {is_shown = true, signal = {name="artillery-shell", type="item"}, is_negative = true},
+    water       = {is_shown = true, signal = {name="water", type="fluid"}, is_negative = false},
+    ore         = {is_shown = false, signal = {name="siganl-O", type="virtual"}, is_negative = false},
+    buildings   = {is_shown = false, signal = {name="signal-B", type="virtual"}, is_negative = false},
+    ghosts      = {is_shown = false, signal = {name="signal-G", type="virtual"}, is_negative = false},
+    items_on_ground = {is_shown = false, signal = {name="signal-I", type="virtual"}, is_negative = false},
+    trees_and_rocks = {is_shown = false, signal = {name="signal-T", type="virtual"}, is_negative = false},
+    to_be_deconstructed = {is_shown = false, signal = {name="signal-D", type="virtual"}, is_negative = false},
+  } -- Default "show bitmap" number = 483
+}
+
 function on_tick_scanner(network)
   local scanner = global.scanners[network.deployer.unit_number]
   if not scanner then return end
@@ -52,6 +72,7 @@ function on_built_scanner(entity, event)
     y = 0,
     width = 64,
     height = 64,
+    settings = 31
   }
   local tags = event.tags
   if event.source and event.source.valid then
@@ -68,6 +89,8 @@ function on_built_scanner(entity, event)
     scanner.width_signal = tags.width_signal
     scanner.height = tags.height
     scanner.height_signal = tags.height_signal
+    scanner.settings = tags.settings or 0
+    scanner.settings_signal = tags.settings_signal
   end
   mark_unknown_signals(scanner)
   scanner.entity = entity
@@ -150,7 +173,7 @@ function reset_scanner_gui_style(screen)
   local gui = screen["recursive-blueprints-scanner"]
   if not gui then return end
   local input_flow = gui.children[2].children[3].children[1].children[2]
-  for i = 1, 4 do
+  for i = 1, 5 do
     input_flow.children[i].children[2].style = "recursive-blueprints-slot"
   end
 end
@@ -255,65 +278,32 @@ function create_scanner_gui(player, entity)
   }
   input_flow.style.horizontal_align = "right"
 
-  -- X button and label
-  local x_flow = input_flow.add{
-    type = "flow",
-  }
-  x_flow.style.vertical_align = "center"
-  x_flow.add{
-    type = "label",
-    caption = {"", {"description.x-offset"}, ":"}
-  }
-  x_flow.add{
-    type = "sprite-button",
-    style = "recursive-blueprints-slot",
-    name = "recursive-blueprints-scanner-x"
-  }
-
-  -- Y button and label
-  local y_flow = input_flow.add{
-    type = "flow",
-  }
-  y_flow.style.vertical_align = "center"
-  y_flow.add{
-    type = "label",
-    caption = {"", {"description.y-offset"}, ":"}
-  }
-  y_flow.add{
-    type = "sprite-button",
-    style = "recursive-blueprints-slot",
-    name = "recursive-blueprints-scanner-y"
-  }
-
-  -- Width button and label
-  local width_flow = input_flow.add{
-    type = "flow",
-  }
-  width_flow.style.vertical_align = "center"
-  width_flow.add{
-    type = "label",
-    caption = {"", {"gui-map-generator.map-width"}, ":"}
-  }
-  width_flow.add{
-    type = "sprite-button",
-    style = "recursive-blueprints-slot",
-    name = "recursive-blueprints-scanner-width"
-  }
-
-  -- Height button and label
-  local height_flow = input_flow.add{
-    type = "flow",
-  }
-  height_flow.style.vertical_align = "center"
-  height_flow.add{
-    type = "label",
-    caption = {"", {"gui-map-generator.map-height"}, ":"}
-  }
-  height_flow.add{
-    type = "sprite-button",
-    style = "recursive-blueprints-slot",
-    name = "recursive-blueprints-scanner-height"
-  }
+  -- Add settings buttons with labels
+  add_signal_button(
+    input_flow,
+    "description.x-offset",
+    "recursive-blueprints-scanner-x"
+  )
+  add_signal_button(
+    input_flow,
+    "description.y-offset",
+    "recursive-blueprints-scanner-y"
+  )
+  add_signal_button(
+    input_flow,
+    "gui-map-generator.map-width",
+    "recursive-blueprints-scanner-width"
+  )
+  add_signal_button(
+    input_flow,
+    "gui-map-generator.map-height",
+    "recursive-blueprints-scanner-height"
+  )
+  add_signal_button(
+    input_flow,
+    "description.settings",
+    "recursive-blueprints-scanner-settings"
+  )
 
   -- Minimap
   local minimap_frame = main_flow.add{
@@ -376,6 +366,22 @@ function create_scanner_gui(player, entity)
   -- Display current values
   update_scanner_gui(gui)
   return gui
+end
+
+function add_signal_button(container, caption, name)
+  local flow = container.add{
+    type = "flow",
+  }
+  flow.style.vertical_align = "center"
+  flow.add{
+    type = "label",
+    caption = {"", {caption}, ":"}
+  }
+  flow.add{
+    type = "sprite-button",
+    style = "recursive-blueprints-slot",
+    name = name
+  }
 end
 
 -- Build the "select a signal or constant" gui
@@ -798,6 +804,7 @@ function update_scanner_gui(gui)
   set_slot_button(input_flow.children[2].children[2], scanner.y, scanner.y_signal)
   set_slot_button(input_flow.children[3].children[2], scanner.width, scanner.width_signal)
   set_slot_button(input_flow.children[4].children[2], scanner.height, scanner.height_signal)
+  set_slot_button(input_flow.children[5].children[2], scanner.settings, scanner.settings_signal)
 
   -- Update minimap
   local x = scanner.x
@@ -837,10 +844,10 @@ function update_scanner_output(output_flow, entity)
       button.number = signal.count
       button.sprite = get_signal_sprite(signal.signal)
       button.tooltip = {"",
-       "[font=default-bold][color=255,230,192]",
-       get_localised_name(signal.signal),
-       ":[/color][/font] ",
-       util.format_number(signal.count),
+        "[font=default-bold][color=255,230,192]",
+        get_localised_name(signal.signal),
+        ":[/color][/font] ",
+        util.format_number(signal.count),
       }
     else
       -- Display empty slot
@@ -870,17 +877,46 @@ function set_slot_button(button, value, signal)
   end
 end
 
--- Scan the area for resources
+-- Scan the area for entitys
 function scan_resources(scanner)
   if not scanner then return end
   if not scanner.entity.valid then return end
-  local resources = {item = {}, fluid = {}, virtual = {}}
+  local scans = {
+    item = {}, fluid = {}, buildings ={}, items_on_ground = {},
+    counters = {
+      uncharted = 0,
+      cliffs = 0,
+      targets = 0,
+      water = 0,
+      ore = 0,
+      buildings = 0,
+      ghosts = 0,
+      items_on_ground = 0,
+      trees_and_rocks = 0, --and fish
+      to_be_deconstructed = 0,
+    }
+  }
   local p = scanner.entity.position
   local force = scanner.entity.force
   local surface = scanner.entity.surface
   local x = scanner.x
   local y = scanner.y
   local blacklist = {}
+
+  local forces = {"neutral"}
+  if global.artillery_shell then
+    -- Count enemy bases too
+    for _, enemy in pairs(game.forces) do
+      if force ~= enemy
+      and enemy.name ~= "neutral"
+      and not force.get_friend(enemy)
+      and not force.get_cease_fire(enemy) then
+        table.insert(forces, enemy.name)
+      end
+    end
+  end
+  table.insert(forces, force.name)
+  local scan_settings = {force = force, forces = forces, surface = surface, scan = {}}
 
   -- Align to grid
   if scanner.width % 2 ~= 0 then x = x + 0.5 end
@@ -914,10 +950,10 @@ function scan_resources(scanner)
         if top < y1 then top = y1 end
         if bottom > y2 then bottom = y2 end
         local area = {{left, top}, {right, bottom}}
-        count_resources(force, surface, area, resources, blacklist)
+        scan_area(scan_settings, area, scans, blacklist)
       else
         -- Add uncharted chunk
-        resources.virtual["signal-black"] = (resources.virtual["signal-black"] or 0) + 1
+        scans.counters.uncharted = scans.counters.uncharted + 1
       end
     end
   end
@@ -925,7 +961,8 @@ function scan_resources(scanner)
   -- Copy resources to combinator output
   local behavior = scanner.entity.get_control_behavior()
   local index = 1
-  for type, resource in pairs(resources) do
+  for _, type in pairs({"item", "fluid"}) do
+    local resource = scans[type]
     for name, count in pairs(resource) do
       -- Avoid int32 overflow
       if count > 2147483647 then count = 2147483647 end
@@ -943,46 +980,47 @@ function scan_resources(scanner)
   end
 end
 
--- Count the resources in a chunk
-function count_resources(force, surface, area, resources, blacklist)
-  local forces = {"neutral"}
-  if global.artillery_shell then
-    -- Count enemy bases too
-    for _, enemy in pairs(game.forces) do
-      if force ~= enemy
-      and not force.get_friend(enemy)
-      and not force.get_cease_fire(enemy) then
-        table.insert(forces, enemy.name)
-      end
-    end
-  end
-
+-- Count the entitys in a chunk
+function scan_area(scan_settings, area, scans, blacklist)
   -- Search the area
-  local result = surface.find_entities_filtered{
+  local result = scan_settings.surface.find_entities_filtered{
     area = area,
-    force = forces,
+    force = scan_settings.forces,
   }
-  for _, resource in pairs(result) do
-    local hash = pos_hash(resource, 0, 0)
-    local prototype = resource.prototype
+  for _, entity in pairs(result) do
+    local hash = pos_hash(entity, 0, 0)
+    local prototype = entity.prototype
     if blacklist[hash] then
       -- We already counted this
-    elseif resource.type == "resource" then
+    elseif entity.type == "resource" then
       -- Mining drill resources
       local type = prototype.mineable_properties.products[1].type
       local name = prototype.mineable_properties.products[1].name
-      local amount = resource.amount
+      local amount = entity.amount
       if prototype.infinite_resource then
         amount = 1
       end
-      resources[type][name] = (resources[type][name] or 0) + amount
-    elseif global.cliff_explosives and resource.type == "cliff" then
+      scans[type][name] = (scans[type][name] or 0) + amount
+      scans.counters.ore = scans.counters.ore + amount
+    elseif global.cliff_explosives and entity.type == "cliff" then
       -- Cliff
-      resources.item["cliff-explosives"] = (resources.item["cliff-explosives"] or 0) - 1
-    elseif global.artillery_shell and MILITARY_STRUCTURES[resource.type] then
+      scans.counters.cliffs = scans.counters.cliffs + 1
+    elseif entity.force == scan_settings.force then
+      -- ghosts and buildings
+      if entity.name == "entity-ghost" then
+        scans.buildings[entity.ghost_name] = (scans.buildings[entity.ghost_name] or 0) + 1
+        scans.counters.ghosts = scans.counters.ghosts + 1
+      elseif prototype.flags and not prototype.flags.hidden then
+        scans.buildings[prototype.name] = (scans.buildings[prototype.name] or 0) + 1
+        scans.counters.buildings = scans.counters.buildings + 1
+        if entity.to_be_deconstructed then
+          scans.counters.to_be_deconstructed = scans.counters.to_be_deconstructed + 1
+        end
+      end
+    elseif global.artillery_shell and MILITARY_STRUCTURES[entity.type] then
       -- Enemy base
-      resources.item["artillery-shell"] = (resources.item["artillery-shell"] or 0) - 1
-    elseif (resource.type == "tree" or resource.type == "fish" or prototype.count_as_rock_for_filtered_deconstruction)
+      scans.counters.targets = scans.counters.targets + 1
+    elseif (entity.type == "tree" or entity.type == "fish" or prototype.count_as_rock_for_filtered_deconstruction)
     and prototype.mineable_properties.minable
     and prototype.mineable_properties.products then
       -- Trees, fish, rocks
@@ -992,14 +1030,19 @@ function count_resources(force, surface, area, resources, blacklist)
           amount = (product.amount_min + product.amount_max) / 2
           amount = amount * product.probability
         end
-        resources[product.type][product.name] = (resources[product.type][product.name] or 0) + amount
+        scans[product.type][product.name] = (scans[product.type][product.name] or 0) + amount
+        scans.counters.trees_and_rocks = scans.counters.trees_and_rocks + 1
       end
+    elseif entity.name == "item-on-ground" and entity.type == "item-entity" then
+      -- Item on ground
+      scans.items_on_ground[entity.stack.name] = (scans.items_on_ground[entity.stack.name] or 0) + 1
+      scans.counters.items_on_ground = scans.counters.items_on_ground + 1
     end
     -- Mark as counted
     blacklist[hash] = true
   end
   -- Water
-  resources.fluid["water"] = (resources.fluid["water"] or 0) + surface.count_tiles_filtered{
+  scans.counters.water = scans.counters.water + scan_settings.surface.count_tiles_filtered{
     area = {{round(area[1][1]), round(area[1][2])},{round(area[2][1]), round(area[2][2])}},
     collision_mask = "water-tile",
   }

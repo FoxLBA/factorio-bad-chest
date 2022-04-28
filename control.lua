@@ -10,6 +10,7 @@ function on_init()
   global.networks = {}
   global.scanners = {}
   global.blueprints = {}
+  global.scanner_upgrade = true
   on_mods_changed()
 end
 
@@ -25,8 +26,9 @@ function on_mods_changed(event)
   -- Migrations
   if event
   and event.mod_changes
-  and event.mod_changes["recursive-blueprints"]
-  and event.mod_changes["recursive-blueprints"].old_version then
+  and event.mod_changes["rec-blue-plus"]
+  and event.mod_changes["rec-blue-plus"].old_version then
+    --[[drop old recursive-blueprints migrations
     -- Migrate fuel requests
     if event.mod_changes["recursive-blueprints"].old_version < "1.1.5" then
       local new_fuel_requests = {}
@@ -47,6 +49,14 @@ function on_mods_changed(event)
         end
       end
       global.deployers = new_deployers
+    end
+    ]]--
+    -- Migrate scaner settings
+    if not global.scanner_upgrade or event.mod_changes["rec-blue-plus"].old_version < "1.3.1" then
+      for _, scanner in pairs(global.scanners or {}) do
+        scanner.settings = 31
+      end
+      global.scanner_upgrade = true
     end
   end
 
