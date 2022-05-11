@@ -16,8 +16,6 @@ end
 
 function on_mods_changed(event)
   global.deployer_index = nil
-  global.cliff_explosives = (game.item_prototypes["cliff-explosives"] ~= nil)
-  global.artillery_shell = (game.item_prototypes["artillery-shell"] ~= nil)
   if not global.networks then
     global.networks = {}
   end
@@ -27,7 +25,7 @@ function on_mods_changed(event)
   if event
   and event.mod_changes
   and event.mod_changes["rec-blue-plus"]
-  and event.mod_changes["rec-blue-plus"].old_version then
+  and event.mod_changes["rec-blue-plus"].old_version and false then
     --[[drop old recursive-blueprints migrations
     -- Migrate fuel requests
     if event.mod_changes["recursive-blueprints"].old_version < "1.1.5" then
@@ -52,12 +50,16 @@ function on_mods_changed(event)
     end
     ]]--
     -- Migrate scaner settings
-    if not global.scanner_upgrade or event.mod_changes["rec-blue-plus"].old_version < "1.3.1" then
+    if not global.scanner_upgrade then --or event.mod_changes["rec-blue-plus"].old_version < "1.3.1" then
       for _, scanner in pairs(global.scanners or {}) do
-        scanner.settings = 31
+        scanner.filter = 483
       end
       global.scanner_upgrade = true
     end
+  end
+
+  for _, scanner in pairs(global.scanners or {}) do
+    scanner.filter = 483
   end
 
   -- Construction robotics unlocks recipes

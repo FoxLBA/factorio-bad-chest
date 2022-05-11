@@ -16,18 +16,11 @@ local add_scanner_resource = function(entity)
   end
 end
 
--- Counters: uncharted, water, buildings, ghosts, "item on ground", "to be deconstructed".
-local counter_num = 6
-
--- Cliff explosives
-if data.raw["capsule"]["cliff-explosives"] then
-  counter_num = counter_num + 1
-end
-
--- Artillery shell
-if data.raw["ammo"]["artillery-shell"] then
-  counter_num = counter_num + 1
-end
+-- Counters: uncharted, cliffs, Artillery targets,
+-- water, ore, buildings,
+-- ghosts, item on ground, trees_and_rocks,
+-- to be deconstructed.
+local counter_num = 10
 
 -- Resources
 for _, resource in pairs(data.raw["resource"]) do
@@ -52,4 +45,4 @@ for _, fish in pairs(data.raw["fish"]) do
 end
 
 -- Set resource scanner output size
-data.raw["constant-combinator"]["recursive-blueprints-scanner"].item_slot_count = table_size(resources["item"]) + table_size(resources["fluid"] + counter_num)
+data.raw["constant-combinator"]["recursive-blueprints-scanner"].item_slot_count = table_size(resources["item"]) + table_size(resources["fluid"]) + counter_num
