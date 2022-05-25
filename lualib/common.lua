@@ -1,23 +1,21 @@
 -- Cache the circuit networks attached to the entity
 -- The entity must be valid
-function update_network(deployer)
-  if deployer.name == "recursive-blueprints-scanner" then
+function update_network(entity)
+  if entity.name == "recursive-blueprints-scanner" then
     -- Resource scanner only uses circuit networks if one of the signals is set
-    local scanner = global.scanners[deployer.unit_number]
-    if not (scanner.x_signal or scanner.y_signal or scanner.width_signal or scanner.height_signal) then
-      return
-    end
+    local scanner = global.scanners[entity.unit_number]
+    if not scanner.network_imput then return end
   end
-  local network = global.networks[deployer.unit_number]
+  local network = global.networks[entity.unit_number]
   if not network then
-    network = {deployer = deployer}
-    global.networks[deployer.unit_number] = network
+    network = {deployer = entity}
+    global.networks[entity.unit_number] = network
   end
   if not network.red or not network.red.valid then
-    network.red = deployer.get_circuit_network(defines.wire_type.red)
+    network.red = entity.get_circuit_network(defines.wire_type.red)
   end
   if not network.green or not network.green.valid then
-    network.green = deployer.get_circuit_network(defines.wire_type.green)
+    network.green = entity.get_circuit_network(defines.wire_type.green)
   end
 end
 
@@ -50,96 +48,6 @@ end
 
 function round(n)
   return math.floor(n + 0.5)
-end
-
-function get_blueprint_to_setup(player)
-  local bp = player.blueprint_to_setup
-  if not bp then return nil end
-  if not bp.valid_for_read then return nil end
-  return bp
-end
-
--- Create automatic mode tags for each train
-function create_tags(entities)
-  local result = {}
-  for _, entity in pairs(entities) do
-    local tag = {
-      name = entity.name,
-      position = entity.position,
-    }
-
-    if entity.train and not entity.train.manual_mode then
-      -- Write the automatic mode tag
-      -- Also save the train length, to tell when the train is finished building
-      tag.automatic_mode = true
-      tag.length = #entity.train.carriages
-    elseif entity.name == "recursive-blueprints-scanner" then
-      -- Write the scanner settings
-      local scanner = global.scanners[entity.unit_number]
-      tag.x = scanner.x
-      tag.x_signal = scanner.x_signal
-      tag.y = scanner.y
-      tag.y_signal = scanner.y_signal
-      tag.width = scanner.width
-      tag.width_signal = scanner.width_signal
-      tag.height = scanner.height
-      tag.height_signal = scanner.height_signal
-    end
-
-    -- Save the entity even if it has no custom tags
-    -- This ensures that the offset is calculated correctly
-    result[pos_hash(entity, 0, 0)] = tag
-  end
-  return result
-end
-
-function add_tags_to_blueprint(tags, blueprint)
-  if not tags then return end
-  if next(tags) == nil then return end
-  if not blueprint then return end
-  if not blueprint.valid_for_read then return end
-  if not blueprint.is_blueprint then return end
-  if not blueprint.is_blueprint_setup() then return end
-  local blueprint_entities = blueprint.get_blueprint_entities()
-  if not blueprint_entities then return end
-  if #blueprint_entities < 1 then return end
-
-  -- Calculate offset
-  local offset = calculate_offset(tags, blueprint_entities)
-  if not offset then return end
-
-  -- Search for matching entities with custom tags
-  local found = false
-  for _, entity in pairs(blueprint_entities) do
-    local settings = tags[pos_hash(entity, offset.x, offset.y)]
-    if settings then
-      if settings.automatic_mode then
-        -- Add train tags
-        if not entity.tags then entity.tags = {} end
-        entity.tags.manual_mode = false
-        entity.tags.train_length = settings.length
-        found = true
-      elseif settings.width then
-        -- Add scanner tags
-        if not entity.tags then entity.tags = {} end
-        entity.tags.x = settings.x
-        entity.tags.x_signal = settings.x_signal
-        entity.tags.y = settings.y
-        entity.tags.y_signal = settings.y_signal
-        entity.tags.width = settings.width
-        entity.tags.width_signal = settings.width_signal
-        entity.tags.height = settings.height
-        entity.tags.height_signal = settings.height_signal
-        entity.control_behavior = nil
-        found = true
-      end
-    end
-  end
-
-  -- Update blueprint
-  if found then
-    blueprint.set_blueprint_entities(blueprint_entities)
-  end
 end
 
 -- Calculate the position offset between two sets of entities

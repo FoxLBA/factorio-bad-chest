@@ -139,3 +139,9 @@ data.raw["gui-style"]["default"]["recursive-blueprints-tab-button-selected-grid"
   hovered_graphical_set = grid_selected,
   clicked_graphical_set = grid_selected,
 }
+
+data.raw["gui-style"]["default"]["recursive-blueprints-checkbox-minus"] = {
+  type = "checkbox_style",
+  parent = "checkbox",
+  checkmark = {position = {456, 160}, size = {28, 28}}
+}
