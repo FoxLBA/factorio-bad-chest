@@ -12,27 +12,23 @@ function on_init()
   global.networks = {}
   global.scanners = {}
   global.blueprints = {}
-  global.scanner_upgrade = true
   on_mods_changed()
 end
 
 function on_mods_changed(event)
   global.deployer_index = nil
-  if not global.networks then
-    global.networks = {}
-  end
+  if not global.networks then global.networks = {} end
   global.blueprints = {}
 
-  -- Check deleted signals in the default counter settings.
+  -- Check deleted signals in the default scanner settings.
   GUI_util.cache_signals()
   AreaScanner.mark_unknown_signals(AreaScanner.DEFAULT_SCANNER_SETTINGS)
 
   -- Migrations
   if event
   and event.mod_changes
-  and event.mod_changes["rec-blue-plus"]
-  and event.mod_changes["rec-blue-plus"].old_version and false then
-    --[[drop old recursive-blueprints migrations
+  and event.mod_changes["recursive-blueprints"]
+  and event.mod_changes["recursive-blueprints"].old_version then
     -- Migrate fuel requests
     if event.mod_changes["recursive-blueprints"].old_version < "1.1.5" then
       local new_fuel_requests = {}
@@ -54,19 +50,23 @@ function on_mods_changed(event)
       end
       global.deployers = new_deployers
     end
-    ]]--
   end
 
-  -- This migration condition is suitable for compatibility with the original recursive-blueprints mod.
-  if true or not global.scanner_upgrade then
+  --Migrate to new scanner data format.
+  if (event
+  and event.mod_changes
+  and event.mod_changes["recursive-blueprints"]
+  and event.mod_changes["recursive-blueprints"].old_version)
+  or (event
+  and event.mod_changes
+  and event.mod_changes["rec-blue-plus"]
+  and event.mod_changes["rec-blue-plus"].old_version < "1.3.1") then
     for _, scanner in pairs(global.scanners or {}) do
-      if not scanner.settings or type(scanner.settings) == "number" then
-        scanner.settings = nil
+      if not scanner.settings then
         scanner = AreaScanner.deserialize(scanner.entity, scanner)
         AreaScanner.make_previous(scanner)
       end
     end
-    global.scanner_upgrade = true
   end
 
   -- Delete signals from uninstalled mods
