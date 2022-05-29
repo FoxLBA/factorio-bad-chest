@@ -45,4 +45,8 @@ for _, fish in pairs(data.raw["fish"]) do
 end
 
 -- Set resource scanner output size
-data.raw["constant-combinator"]["recursive-blueprints-scanner"].item_slot_count = table_size(resources["item"]) + table_size(resources["fluid"]) + counter_num
+data.raw["constant-combinator"]["recursive-blueprints-scanner"].item_slot_count = 
+  table_size(resources["item"])
+  + table_size(resources["fluid"])
+  + counter_num
+  + settings.startup["recursive-blueprints-scanner-extra-slots"].value

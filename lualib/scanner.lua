@@ -250,12 +250,12 @@ function AreaScanner.scan_resources(scanner)
   local scanner_settings = scanner.settings
   local force = scanner.entity.force
   local forces = {} --Rough filter.
-  if true or scanner_settings.filters.show_resources or scanner_settings.filters.show_environment or scanner_settings.filters.show_items_on_ground
+  if scanner_settings.filters.show_resources or scanner_settings.filters.show_environment or scanner_settings.filters.show_items_on_ground
   or scanner_settings.counters.cliffs.is_shown or scanner_settings.counters.resources.is_shown
   or scanner_settings.counters.items_on_ground.is_shown or scanner_settings.counters.trees_and_rocks.is_shown then
     forces = {"neutral"} --(ore, cliffs, items_on_ground, trees_and_rocks)
   end
-  if true or scanner_settings.counters.targets.is_shown then
+  if scanner_settings.counters.targets.is_shown then
     -- Count enemy bases
     for _, enemy in pairs(game.forces) do
       if force ~= enemy
@@ -266,13 +266,16 @@ function AreaScanner.scan_resources(scanner)
       end
     end
   end
-  if true or scanner_settings.filters.show_buildings or scanner_settings.filters.show_ghosts
+  if scanner_settings.filters.show_buildings or scanner_settings.filters.show_ghosts
   or scanner_settings.counters.buildings.is_shown or scanner_settings.counters.ghosts.is_shown
   or scanner_settings.counters.to_be_deconstructed.is_shown then
     table.insert(forces, force.name) --(buildings, ghosts, to_be_deconstructed)
   end
 
-  if #forces == 0 then return end  --nothing to scan
+  if #forces == 0 then
+    scanner.entity.get_control_behavior().parameters = nil
+    return
+  end  --nothing to scan
 
   local p = scanner.entity.position
   local surface = scanner.entity.surface
@@ -333,15 +336,15 @@ function AreaScanner.scan_resources(scanner)
   local result1 = {item = {}, fluid = {}, virtual = {}}
   local result2 = {item = {}, fluid = {}, virtual = {}}
 
-  if true or scanner_settings.filters.show_resources then result1 = scans.resources end
-  if true or scanner_settings.filters.show_environment then AreaScanner.count_mineable_entity(scans.environment, result1) end
-  if true or scanner_settings.filters.show_items_on_ground then result2.item = scans.items_on_ground end
-  if true or scanner_settings.filters.show_buildings then AreaScanner.count_mineable_entity(scans.buildings, result2) end
-  if true or scanner_settings.filters.show_ghosts then AreaScanner.count_mineable_entity(scans.ghosts, result2) end
+  if scanner_settings.filters.show_resources then result1 = scans.resources end
+  if scanner_settings.filters.show_environment then AreaScanner.count_mineable_entity(scans.environment, result1) end
+  if scanner_settings.filters.show_items_on_ground then result2.item = scans.items_on_ground end
+  if scanner_settings.filters.show_buildings then AreaScanner.count_mineable_entity(scans.buildings, result2) end
+  if scanner_settings.filters.show_ghosts then AreaScanner.count_mineable_entity(scans.ghosts, result2) end
 
   -- Counters
   for name, counter_setting in pairs(scanner_settings.counters) do
-    if true or counter_setting.is_shown and counter_setting.signal then -- FILTERS IS OFF!
+    if counter_setting.is_shown and counter_setting.signal then -- FILTERS IS OFF!
       local count = scans.counters[name]
       if count ~= 0 then
         if counter_setting.is_negative then count = -count end

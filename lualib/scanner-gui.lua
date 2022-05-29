@@ -5,6 +5,7 @@ function AreaScannerGUI.create_scanner_gui(player, entity)
   local scanner = global.scanners[entity.unit_number]
   if not scanner then
     player.force.print('AreaScannerGUI.create_scanner_gui scanner data not found. Generating default settings.')
+    global.deployers[entity.unit_number] = entity
     AreaScanner.on_built_scanner(entity, {})
     scanner = global.scanners[entity.unit_number]
   end
@@ -105,7 +106,7 @@ function AreaScannerGUI.create_scanner_gui(player, entity)
   inner_frame2.style.minimal_width = 0
   inner_frame2.style.left_margin = 6
   inner_frame2.style.vertically_stretchable = true
-  inner_frame2.style.maximal_height = 600
+  --inner_frame2.style.maximal_height = 600
 
   local output_settings_header = inner_frame2.add{type="flow"}
   output_settings_header.add{
@@ -123,7 +124,8 @@ function AreaScannerGUI.create_scanner_gui(player, entity)
     hovered_sprite = "utility/reset",
     clicked_sprite = "utility/reset",
     tooltip = {"description.recursive-blueprints-reset-scanner-counters-settings"},
-    enabled = false
+    enabled = false,
+    visible = false,
   }
   local settings_lines = inner_frame2.add{
     direction = "vertical",
