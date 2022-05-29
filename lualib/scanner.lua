@@ -13,6 +13,10 @@ AreaScanner.MILITARY_STRUCTURES = {
 }
 
 AreaScanner.DEFAULT_SCANNER_SETTINGS = {
+  version = {
+    mod_name = script.mod_name,
+    version = script.active_mods[script.mod_name]
+  },
   scan_area = { --number or signal
     x = 0,
     y = 0,
@@ -122,6 +126,17 @@ function AreaScanner.serialize(entity)
   if scanner then
     local tags = {}
     tags.settings = util.table.deepcopy(scanner.settings)
+    --Adding old format tags.
+    local scan_area = scanner.settings.scan_area
+      for i in {"x", "y", "width", "height"} do
+        if type(scan_area[i]) == "number" then
+          tags[i] = scan_area[i]
+          tags[i.."_signal"] = nil
+        else
+          tags[i] = 0
+          tags[i.."_signal"] = scan_area[i]
+        end
+      end
     return tags
   end
   return nil
@@ -129,19 +144,16 @@ end
 
 function AreaScanner.deserialize(entity, tags)
   local scanner = {}
-  if tags then
-    if tags.settings then
-      scanner.settings = util.table.deepcopy(tags.settings)
-    else
-      scanner.settings = util.table.deepcopy(AreaScanner.DEFAULT_SCANNER_SETTINGS)
-      scanner.settings.scan_area.x = tags.x_signal or tags.x or 0
-      scanner.settings.scan_area.y = tags.y_signal or tags.y  or 0
-      scanner.settings.scan_area.width = tags.width_signal or tags.width or 64
-      scanner.settings.scan_area.height = tags.height_signal or tags.height or 64
-    end
-  end
-  if not scanner.settings then
+  if tags and tags.settings then
+    scanner.settings = util.table.deepcopy(tags.settings)
+  else
     scanner.settings = util.table.deepcopy(AreaScanner.DEFAULT_SCANNER_SETTINGS)
+  end
+  if tags and not tags.settings then
+    scanner.settings.scan_area.x = tags.x_signal or tags.x or 0
+    scanner.settings.scan_area.y = tags.y_signal or tags.y  or 0
+    scanner.settings.scan_area.width = tags.width_signal or tags.width or 64
+    scanner.settings.scan_area.height = tags.height_signal or tags.height or 64
   end
   AreaScanner.mark_unknown_signals(scanner.settings)
   AreaScanner.check_input_signals(scanner)

@@ -12,18 +12,23 @@ function on_init()
   global.networks = {}
   global.scanners = {}
   global.blueprints = {}
-  on_mods_changed()
+  GUI_util.cache_signals()
+  AreaScanner.mark_unknown_signals(AreaScanner.DEFAULT_SCANNER_SETTINGS)
+  cache_blueprint_signals()
 end
 
 function on_mods_changed(event)
-  global.deployer_index = nil
-  if not global.networks then global.networks = {} end
+  --global.deployer_index = nil
+  --if not global.networks then global.networks = {} end
   global.blueprints = {}
 
   -- Check deleted signals in the default scanner settings.
   GUI_util.cache_signals()
   AreaScanner.mark_unknown_signals(AreaScanner.DEFAULT_SCANNER_SETTINGS)
 
+  --[[
+    The old migration code doesn't make sense because the name of the mod has changed.
+    All global data remained in the other execution environment.
   -- Migrations
   if event
   and event.mod_changes
@@ -51,20 +56,33 @@ function on_mods_changed(event)
       global.deployers = new_deployers
     end
   end
+  ]]
+
+  --Migrate deployers and scanners to new mod name
+  if (event and event.mod_changes) and
+  (event.mod_changes["recursive-blueprints"]
+  and event.mod_changes["recursive-blueprints"].old_version) then
+    for _, surface in pairs(game.surfaces) do
+      for _, entity in pairs(surface.find_entities_filtered({name = {"blueprint-deployer", "recursive-blueprints-scanner"}})) do
+        if entity.name == "blueprint-deployer" then
+          global.deployers[entity.unit_number] = entity
+          update_network(entity)
+        elseif entity.name == "recursive-blueprints-scanner" then
+          global.deployers[entity.unit_number] = entity
+          AreaScanner.on_built_scanner(entity, {})
+        end
+      end
+    end
+  end
 
   --Migrate to new scanner data format.
-  if (event
-  and event.mod_changes
-  and event.mod_changes["recursive-blueprints"]
-  and event.mod_changes["recursive-blueprints"].old_version)
-  or (event
-  and event.mod_changes
-  and event.mod_changes["rec-blue-plus"]
+  if (event and event.mod_changes)
+  and (event.mod_changes["rec-blue-plus"]
+  and event.mod_changes["rec-blue-plus"].old_version
   and event.mod_changes["rec-blue-plus"].old_version < "1.3.1") then
     for _, scanner in pairs(global.scanners or {}) do
       if not scanner.settings then
-        scanner = AreaScanner.deserialize(scanner.entity, scanner)
-        AreaScanner.make_previous(scanner)
+        AreaScanner.on_built_scanner(scanner.entity, {tags = scanner})
       end
     end
   end

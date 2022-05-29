@@ -3,6 +3,11 @@ local AreaScannerGUI = {}
 -- Build the scanner gui
 function AreaScannerGUI.create_scanner_gui(player, entity)
   local scanner = global.scanners[entity.unit_number]
+  if not scanner then
+    player.force.print('AreaScannerGUI.create_scanner_gui scanner data not found. Generating default settings.')
+    AreaScanner.on_built_scanner(entity, {})
+    scanner = global.scanners[entity.unit_number]
+  end
 
   -- Destroy any old versions
   if player.gui.screen["recursive-blueprints-scanner"] then
