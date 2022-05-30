@@ -240,7 +240,6 @@ function AreaScanner.count_mineable_entity(source, dest)
   end
 end
 
----TODO: enable filters
 ---Scan the area for entitys
 function AreaScanner.scan_resources(scanner)
   if not scanner then return end
@@ -272,10 +271,10 @@ function AreaScanner.scan_resources(scanner)
     table.insert(forces, force.name) --(buildings, ghosts, to_be_deconstructed)
   end
 
-  if #forces == 0 then
+  if #forces == 0 then --nothing to scan
     scanner.entity.get_control_behavior().parameters = nil
     return
-  end  --nothing to scan
+  end
 
   local p = scanner.entity.position
   local surface = scanner.entity.surface
@@ -327,7 +326,6 @@ function AreaScanner.scan_resources(scanner)
   end
 
   -- Copy resources to combinator output
-  -- TODO: enable filters
   local behavior = scanner.entity.get_control_behavior()
   local index = 1
   local max_index = behavior.signals_count
