@@ -81,19 +81,19 @@ Or check what is already built.
 
 The scanner can display the number of different categories of objects. Some categories are indistinguishable in display, such as constructed buildings and their ghosts. Filters can separate categories from each other. The filter number is a bit mask of the signals to be displayed. (To display multiple categories, the corresponding numbers must be added together)
 
->1 - Empty. Can be used to trigger a rescan.
->2 - Filter: raw resources.
->4 - Filter: trees, stones, fish ("Trees/rocks only" option of the deconstruction planner).
->8 - Filter: buildings.
->16 - Filter: ghosts.
->32 - Filter: items on ground.
->64 - Counter: uncharted chuncs.
->128 - Counter: cliffs.
->256 - Counter: artillery targets.
->512 - Counter: water tiles.
->1024 - Counter: raw resources.
->2048 - Counter: buildings.
->4096 - Counter: ghosts.
->8192 - Counter: items on ground.
->16384 - Counter: trees, stones, fish.
->32768 - Counter: buildings marked for deconstruction.
+1 - Empty. Can be used to trigger a rescan.\
+2 - Filter: raw resources.\
+4 - Filter: trees, stones, fish ("Trees/rocks only" option of the deconstruction planner).\
+8 - Filter: buildings.\
+16 - Filter: ghosts.\
+32 - Filter: items on ground.\
+64 - Counter: uncharted chuncs.\
+128 - Counter: cliffs.\
+256 - Counter: artillery targets.\
+512 - Counter: water tiles.\
+1024 - Counter: raw resources.\
+2048 - Counter: buildings.\
+4096 - Counter: ghosts.\
+8192 - Counter: items on ground.\
+16384 - Counter: trees, stones, fish.\
+32768 - Counter: buildings marked for deconstruction.
