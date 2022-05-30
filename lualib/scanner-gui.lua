@@ -1,0 +1,519 @@
+local AreaScannerGUI = {}
+
+-- Build the scanner gui
+function AreaScannerGUI.create_scanner_gui(player, entity)
+  local scanner = global.scanners[entity.unit_number]
+  if not scanner then
+    player.force.print('AreaScannerGUI.create_scanner_gui scanner data not found. Generating default settings.')
+    global.deployers[entity.unit_number] = entity
+    AreaScanner.on_built_scanner(entity, {})
+    scanner = global.scanners[entity.unit_number]
+  end
+
+  -- Destroy any old versions
+  if player.gui.screen["recursive-blueprints-scanner"] then
+    player.gui.screen["recursive-blueprints-scanner"].destroy()
+  end
+
+  -- Heading
+  local gui = player.gui.screen.add{
+    type = "frame",
+    name = "recursive-blueprints-scanner",
+    direction = "vertical",
+    tags = {["recursive-blueprints-id"] = entity.unit_number}
+  }
+  gui.auto_center = true
+
+  GUI_util.add_titlebar(gui, gui, entity.localised_name, "recursive-blueprints-close", {"gui.close-instruction"})
+  local outer_flow = gui.add{type = "flow"}
+
+  local inner_frame = outer_flow.add{type = "frame", direction = "vertical", style = "entity_frame"}
+  GUI_util.add_status_indicator(inner_frame, entity)
+
+  -- Scan area (settings and minimap)
+  local main_flow = inner_frame.add{type = "flow"}
+
+  -- Settings caption and buttons with labels
+  local left_flow = main_flow.add{type = "flow", direction = "vertical"}
+  left_flow.style.right_margin = 8
+  left_flow.add{
+    type = "label",
+    style = "heading_3_label",
+    caption = {"description.scan-area"},
+  }
+  local input_flow = left_flow.add{type = "flow", direction = "vertical"}
+  input_flow.style.horizontal_align = "right"
+  AreaScannerGUI.add_input_setting_line(input_flow, "description.x-offset", "x")
+  AreaScannerGUI.add_input_setting_line(input_flow, "description.y-offset", "y")
+  AreaScannerGUI.add_input_setting_line(input_flow, "gui-map-generator.map-width", "width")
+  AreaScannerGUI.add_input_setting_line(input_flow, "gui-map-generator.map-height", "height")
+  AreaScannerGUI.add_input_setting_line(input_flow, "description.filter", "filter")
+
+  -- Minimap
+  local minimap_frame = main_flow.add{type = "frame", style = "entity_button_frame"}
+  minimap_frame.style.size = 256
+  minimap_frame.style.vertical_align = "center"
+  minimap_frame.style.horizontal_align = "center"
+  local minimap = minimap_frame.add{
+    type = "minimap",
+    surface_index = entity.surface.index,
+    force = entity.force.name,
+    position = entity.position,
+  }
+  minimap.style.minimal_width = 16
+  minimap.style.minimal_height = 16
+  minimap.style.maximal_width = 256
+  minimap.style.maximal_height = 256
+
+  inner_frame.add{type = "line"}
+
+  -- Output signals
+  inner_frame.add{
+    type = "label",
+    style = "heading_3_label",
+    caption = {"description.output-signals"},
+  }
+  local scroll_pane = inner_frame.add{
+    type = "scroll-pane",
+    style = "recursive-blueprints-scroll",
+    direction = "vertical",
+    horizontal_scroll_policy = "never",
+    vertical_scroll_policy = "auto",
+  }
+  scroll_pane.style.maximal_height = 164
+  local scroll_frame = scroll_pane.add{
+    type = "frame",
+    style = "filter_scroll_pane_background_frame",
+    direction = "vertical",
+  }
+  scroll_frame.style.width = 400
+  scroll_frame.style.minimal_height = 40
+  local slots = scanner.entity.prototype.item_slot_count
+  for i = 1, slots, 10 do
+    local row = scroll_frame.add{type = "flow", style = "packed_horizontal_flow"}
+    for j = 0, 9 do
+      if i+j <= slots then
+        row.add{
+          type = "sprite-button",
+          style = "recursive-blueprints-output",
+        }
+      end
+    end
+  end
+
+  -- Output settings
+  local inner_frame2 = outer_flow.add{type = "frame", direction = "vertical", style = "entity_frame"}
+  inner_frame2.style.minimal_width = 0
+  inner_frame2.style.left_margin = 6
+  inner_frame2.style.vertically_stretchable = true
+  --inner_frame2.style.maximal_height = 600
+
+  local output_settings_header = inner_frame2.add{type="flow"}
+  output_settings_header.add{
+    type = "label",
+    style = "heading_2_label",
+    caption = {"description.output-signals"},
+  }
+  local filler = output_settings_header.add{type = "empty-widget"}
+  filler.style.horizontally_stretchable = true
+  output_settings_header.add{
+    type = "sprite-button",
+    name = "recursive-blueprints-reset",
+    style = "tool_button_red",
+    sprite = "utility/reset",
+    hovered_sprite = "utility/reset",
+    clicked_sprite = "utility/reset",
+    tooltip = {"description.recursive-blueprints-reset-scanner-counters-settings"},
+    enabled = false,
+    visible = false,
+  }
+  local settings_lines = inner_frame2.add{
+    direction = "vertical",
+    type = "flow"  -- Change the type to "scroll-pane" if the number of counters no longer fit in the frame.
+    --type = "scroll-pane",
+    --style = "recursive-blueprints-scroll", -- You need to find the suitable style.
+    --horizontal_scroll_policy = "never",
+    --vertical_scroll_policy = "auto",
+  }
+  for name, _ in pairs(scanner.settings.counters) do
+    AreaScannerGUI.add_counter_setting_line(settings_lines, name)
+  end
+
+  -- Display current values
+  AreaScannerGUI.update_scanner_gui(gui)
+  return gui
+end
+
+function AreaScannerGUI.add_input_setting_line(element, caption, name)
+  local flow = element.add{type = "flow"}
+  flow.style.vertical_align = "center"
+  flow.add{
+    type = "label",
+    caption = {"", {caption}, ":"}
+  }
+  flow.add{
+    type = "sprite-button", style = "recursive-blueprints-slot",
+    name = "recursive-blueprints-signal-select-button",
+    tags = {type = "input", name = name}
+  }
+end
+
+function AreaScannerGUI.add_counter_setting_line(element, name)
+  local flow = element.add{type = "flow"}
+  flow.style.vertical_align = "center"
+  flow.add{
+    type = "checkbox", state = false, style = "recursive-blueprints-checkbox-minus",
+    name = "recursive-blueprints-counter-checkbox",
+    tooltip = {"description.recursive-blueprints-counter-negative-checkbox"}
+  }
+  flow.add{
+    type = "sprite-button", style = "recursive-blueprints-slot",
+    name = "recursive-blueprints-signal-select-button",
+    tags = {type = "output", name = name}
+  }
+  flow.add{
+    type = "label",
+    caption = {"description.recursive-blueprints-counter-name-"..name},
+    tooltip = {"description.recursive-blueprints-counter-tooltip-"..name}
+  }
+end
+
+---TODO: made "Set a constant" frame for filter
+---Build the "select a signal or constant" gui
+---@param element table The sprite button that opened this menu
+function AreaScannerGUI.create_signal_gui(element)
+  local screen = element.gui.screen
+  local primary_gui = screen["recursive-blueprints-scanner"]
+  local id = primary_gui.tags["recursive-blueprints-id"]
+  local scanner = global.scanners[id]
+  local field = element.tags.name
+  local field_type = element.tags.type
+
+  -- Highlight the button that opened the gui
+  AreaScannerGUI.reset_scanner_gui_style(screen)
+  element.style = "recursive-blueprints-slot-selected"
+
+  -- Destroy any old version
+  if screen["recursive-blueprints-signal"] then
+    screen["recursive-blueprints-signal"].destroy()
+  end
+
+  -- Place gui slightly to the right of center
+  local location = primary_gui.location
+  local scale = game.get_player(element.player_index).display_scale
+  location.x = location.x + 126 * scale
+  location.y = location.y - 60 * scale
+
+  -- Find the previously selected signal.
+  local target = {}
+  if field_type == "input" then
+    local v = scanner.settings.scan_area[field]
+    if type(v) == "table" then target = v end
+  else
+    target = scanner.settings.counters[field].signal
+  end
+
+  -- Heading
+  local gui = screen.add{
+    type = "frame",
+    name = "recursive-blueprints-signal",
+    style = "invisible_frame",
+    direction = "vertical",
+    tags = {
+      ["recursive-blueprints-id"] = id,
+      ["recursive-blueprints-field"] = field,
+      ["recursive-blueprints-type"] = field_type,
+    }
+  }
+  gui.location = location
+  local signal_select = gui.add{type = "frame", direction = "vertical"}
+  GUI_util.add_titlebar(signal_select, gui, {"gui.select-signal"}, "recursive-blueprints-close")
+  GUI_util.add_signal_select_frame(signal_select, target)
+
+  if field_type == "output" then return gui end
+  -- Set a constant
+  local set_constant = gui.add{type = "frame", direction = "vertical"}
+  GUI_util.add_titlebar(set_constant, gui, {"gui.or-set-a-constant"})
+  local inner_frame = set_constant.add{
+    type = "frame",
+    style = "entity_frame",
+    direction = "horizontal",
+  }
+  inner_frame.style.vertical_align = "center"
+
+  -- Slider settings
+  local maximum_value = 28  -- 10 * log(999)
+  local allow_negative = false
+  if (field == "x" or field == "y") then
+    maximum_value = 74  -- 2 * 10 * log(10000)
+    allow_negative = true
+  end
+
+  -- Slider
+  local slider = inner_frame.add{
+    type = "slider",
+    name = "recursive-blueprints-slider",
+    maximum_value = maximum_value,
+  }
+  slider.style.top_margin = 8
+  slider.style.bottom_margin = 8
+
+  -- Text field
+  local textfield = inner_frame.add{
+    type = "textfield",
+    name = "recursive-blueprints-constant",
+    numeric = true,
+    allow_negative = allow_negative,
+  }
+  textfield.style.width = 80
+  textfield.style.horizontal_align = "center"
+  if type(scanner.settings.scan_area[field]) == "table" then
+    textfield.text = "0"
+  else
+    textfield.text = tostring(scanner.settings.scan_area[field])
+  end
+  AreaScannerGUI.copy_text_value(textfield)
+
+  -- Submit button
+  local filler = inner_frame.add{type = "empty-widget"}
+  filler.style.horizontally_stretchable = "on"
+  inner_frame.add{
+    type = "button",
+    style = "recursive-blueprints-set-button",
+    name = "recursive-blueprints-set-constant",
+    caption = {"gui.set"},
+  }
+
+  return gui
+end
+
+-- Turn off highlighted scanner button
+function AreaScannerGUI.reset_scanner_gui_style(screen)
+  local gui = screen["recursive-blueprints-scanner"]
+  if not gui then return end
+  local input_flow = gui.children[2].children[1].children[2].children[1].children[2]
+  for i = 1, #input_flow.children do
+    input_flow.children[i].children[2].style = "recursive-blueprints-slot"
+  end
+  local settings_lines = gui.children[2].children[2].children[2]
+  for i = 1, #settings_lines.children do
+    settings_lines.children[i].children[2].style = "recursive-blueprints-slot"
+  end
+end
+
+function AreaScannerGUI.destroy_gui(element)
+    local gui = GUI_util.get_root_element(element)
+    -- Destroy dependent gui
+    local screen = gui.gui.screen
+    if gui.name == "recursive-blueprints-scanner" and screen["recursive-blueprints-signal"] then
+      screen["recursive-blueprints-signal"].destroy()
+    end
+    -- Destroy gui
+    gui.destroy()
+    AreaScannerGUI.reset_scanner_gui_style(screen)
+end
+
+-- Copy constant value from signal gui to scanner gui
+function AreaScannerGUI.set_scanner_value(element)
+  local screen = element.gui.screen
+  local scanner_gui = screen["recursive-blueprints-scanner"]
+  if not scanner_gui then return end
+  local scanner = global.scanners[scanner_gui.tags["recursive-blueprints-id"]]
+  local signal_gui = screen["recursive-blueprints-signal"]
+  local key = signal_gui.tags["recursive-blueprints-field"]
+  if signal_gui.tags["recursive-blueprints-type"] ~= "input" then return end
+
+  local value = tonumber(element.parent.children[2].text) or 0
+  value = AreaScanner.sanitize_area(key, value)
+  scanner.settings.scan_area[key] = value
+  AreaScanner.check_input_signals(scanner)
+  AreaScanner.update_scanner_network(scanner)
+
+  -- Run a scan if the area has changed
+  if scanner.previous[key] ~= value then
+    scanner.previous[key] = value
+    if key == "filter" then
+      AreaScanner.set_filter_mask(scanner.settings, value)
+    end
+    AreaScanner.scan_resources(scanner)
+  end
+
+  -- The user might have changed a signal without changing the area,
+  -- so always refresh the gui.
+  AreaScannerGUI.update_scanner_gui(scanner_gui)
+  AreaScannerGUI.reset_scanner_gui_style(screen)
+
+  -- Close signal gui
+  signal_gui.destroy()
+end
+
+-- Copy signal from signal gui to scanner gui
+function AreaScannerGUI.set_scanner_signal(element)
+  local screen = element.gui.screen
+  local signal_gui = screen["recursive-blueprints-signal"]
+  local scanner_gui = screen["recursive-blueprints-scanner"]
+  if not scanner_gui then return end
+  local scanner = global.scanners[scanner_gui.tags["recursive-blueprints-id"]]
+  local key = signal_gui.tags["recursive-blueprints-field"]
+  local key_type = signal_gui.tags["recursive-blueprints-type"]
+
+  if key_type == "input" then
+    scanner.settings.scan_area[key] = element.tags["recursive-blueprints-signal"]
+    scanner.network_imput = true
+    AreaScanner.update_scanner_network(scanner)
+  else
+    scanner.settings.counters[key].signal = element.tags["recursive-blueprints-signal"]
+    AreaScanner.scan_resources(scanner)
+  end
+  AreaScannerGUI.update_scanner_gui(scanner_gui)
+  AreaScannerGUI.reset_scanner_gui_style(screen)
+
+  -- Close signal gui
+  signal_gui.destroy()
+end
+
+-- Copy value from slider to text field
+function AreaScannerGUI.copy_slider_value(element)
+  local gui = GUI_util.get_root_element(element)
+  local field = gui.tags["recursive-blueprints-field"]
+  local value = 0
+  if field == 'x' or field == 'y' then
+    -- 1-9(+1) 10-90(+10) 100-900(+100) 1000-10000(+1000)
+    if element.slider_value < 10 then
+      value = 1000 * (element.slider_value - 10)
+    elseif element.slider_value < 19 then
+      value = 100 * (element.slider_value - 19)
+    elseif element.slider_value < 28 then
+      value = 10 * (element.slider_value - 28)
+    elseif element.slider_value < 47 then
+      value = element.slider_value - 37
+    elseif element.slider_value < 56 then
+      value = 10 * (element.slider_value - 46)
+    elseif element.slider_value < 65 then
+      value = 100 * (element.slider_value - 55)
+    else
+      value = 1000 * (element.slider_value - 64)
+    end
+  else
+    -- 1-10(+1) 20-100(+10) 200-999(+100)
+    if element.slider_value < 11 then
+      value = element.slider_value
+    elseif element.slider_value < 20 then
+      value = 10 * (element.slider_value - 9)
+    elseif element.slider_value < 28 then
+      value = 100 * (element.slider_value - 18)
+    else
+      value = 999
+    end
+  end
+  element.parent["recursive-blueprints-constant"].text = tostring(value)
+end
+
+-- Copy value from text field to slider
+function AreaScannerGUI.copy_text_value(element)
+  local gui = GUI_util.get_root_element(element)
+  local field = gui.tags["recursive-blueprints-field"]
+  local text_value = tonumber(element.text) or 0
+  local value = 0
+  if field == 'x' or field == 'y' then
+    if text_value <= -1000 then
+      value = math.floor(text_value / 1000 + 10.5)
+    elseif text_value <= -100 then
+      value = math.floor(text_value / 100 + 19.5)
+    elseif text_value <= -10 then
+      value = math.floor(text_value / 10 + 28.5)
+    elseif text_value <= 10 then
+      value = math.floor(text_value + 37.5)
+    elseif text_value <= 100 then
+      value = math.floor(text_value / 10 + 46.5)
+    elseif text_value <= 1000 then
+      value = math.floor(text_value / 100 + 55.5)
+    else
+      value = math.floor(text_value / 1000 + 64.5)
+    end
+  else
+    if text_value <= 10 then
+      value = text_value
+    elseif text_value <= 100 then
+      value = math.floor(text_value / 10 + 9.5)
+    elseif text_value < 999 then
+      value = math.floor(text_value / 100 + 18.5)
+    else
+      value = 28
+    end
+  end
+  element.parent["recursive-blueprints-slider"].slider_value = value
+end
+
+-- Display all constant-combinator output signals in the gui
+function AreaScannerGUI.update_scanner_output(output_flow, entity)
+  local behavior = entity.get_control_behavior()
+  for i = 1, entity.prototype.item_slot_count do
+    -- 10 signals per row
+    local row = math.ceil(i / 10)
+    local col = (i-1) % 10 + 1
+    local button = output_flow.children[row].children[col]
+    local signal = behavior.get_signal(i)
+    if signal and signal.signal and signal.signal.name then
+      -- Display signal and value
+      button.number = signal.count
+      button.sprite = GUI_util.get_signal_sprite(signal.signal)
+      button.tooltip = {"",
+        "[font=default-bold][color=255,230,192]",
+        GUI_util.get_localised_name(signal.signal),
+        ":[/color][/font] ",
+        GUI_util.format_amount(signal.count),
+      }
+    else
+      -- Display empty slot
+      button.number = nil
+      button.sprite = nil
+      button.tooltip = ""
+    end
+  end
+end
+
+-- Populate gui with the latest data
+function AreaScannerGUI.update_scanner_gui(gui)
+  local scanner = global.scanners[gui.tags["recursive-blueprints-id"]]
+  if not scanner then return end
+  if not scanner.entity.valid then return end
+
+  -- Update area dimensions
+  local input_flow = gui.children[2].children[1].children[2].children[1].children[2]
+  GUI_util.set_slot_button(input_flow.children[1].children[2], scanner.previous.x,      scanner.settings.scan_area.x)
+  GUI_util.set_slot_button(input_flow.children[2].children[2], scanner.previous.y,      scanner.settings.scan_area.y)
+  GUI_util.set_slot_button(input_flow.children[3].children[2], scanner.previous.width,  scanner.settings.scan_area.width)
+  GUI_util.set_slot_button(input_flow.children[4].children[2], scanner.previous.height, scanner.settings.scan_area.height)
+  GUI_util.set_slot_button(input_flow.children[5].children[2], scanner.previous.filter, scanner.settings.scan_area.filter)
+
+  -- Update minimap
+  local x = scanner.previous.x
+  local y = scanner.previous.y
+  if settings.global["recursive-blueprints-area"].value == "corner" then
+    -- Convert from top left corner to center
+    x = x + math.floor(scanner.width/2)
+    y = y + math.floor(scanner.height/2)
+  end
+  local minimap = gui.children[2].children[1].children[2].children[2].children[1]
+  minimap.position = {
+    scanner.entity.position.x + x,
+    scanner.entity.position.y + y,
+  }
+  local largest = math.max(scanner.previous.width, scanner.previous.height)
+  if largest == 0 then largest = 32 end
+  minimap.zoom = 256 / largest
+  minimap.style.natural_width = scanner.previous.width / largest * 256
+  minimap.style.natural_height = scanner.previous.height / largest * 256
+
+  AreaScannerGUI.update_scanner_output(gui.children[2].children[1].children[5].children[1], scanner.entity)
+
+  local settings_lines = gui.children[2].children[2].children[2]
+  for i = 1, #settings_lines.children do
+    local sprite_button = settings_lines.children[i].children[2]
+    GUI_util.set_slot_button(sprite_button, 0, scanner.settings.counters[sprite_button.tags.name].signal)
+    settings_lines.children[i].children[1].state = scanner.settings.counters[sprite_button.tags.name].is_negative
+  end
+end
+
+return AreaScannerGUI

@@ -12,5 +12,13 @@ data:extend{
     setting_type = "runtime-global",
     default_value = "never",
     allowed_values = {"never", "with 'L>0' signal", "with 'L>=0' signal", "always"},
-  }
+  },
+  {
+    type = "int-setting",
+    name = "recursive-blueprints-scanner-extra-slots",
+    setting_type = "startup",
+    minimum_value = 0,
+    maximum_value = 50,
+    default_value = 10
+}
 }

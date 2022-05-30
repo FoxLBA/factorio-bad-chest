@@ -2,7 +2,9 @@ require "util"
 require "lualib.logging"
 require "lualib.common"
 require "lualib.deployer"
-require "lualib.scanner"
+GUI_util = require "lualib.gui-util"
+AreaScannerGUI = require "lualib.scanner-gui"
+AreaScanner = require "lualib.scanner"
 
 function on_init()
   global.deployers = {}
@@ -10,18 +12,23 @@ function on_init()
   global.networks = {}
   global.scanners = {}
   global.blueprints = {}
-  on_mods_changed()
+  GUI_util.cache_signals()
+  AreaScanner.mark_unknown_signals(AreaScanner.DEFAULT_SCANNER_SETTINGS)
+  cache_blueprint_signals()
 end
 
 function on_mods_changed(event)
-  global.deployer_index = nil
-  global.cliff_explosives = (game.item_prototypes["cliff-explosives"] ~= nil)
-  global.artillery_shell = (game.item_prototypes["artillery-shell"] ~= nil)
-  if not global.networks then
-    global.networks = {}
-  end
+  --global.deployer_index = nil
+  --if not global.networks then global.networks = {} end
   global.blueprints = {}
 
+  -- Check deleted signals in the default scanner settings.
+  GUI_util.cache_signals()
+  AreaScanner.mark_unknown_signals(AreaScanner.DEFAULT_SCANNER_SETTINGS)
+
+  --[[
+    The old migration code doesn't make sense because the name of the mod has changed.
+    All global data remained in the other execution environment.
   -- Migrations
   if event
   and event.mod_changes
@@ -49,6 +56,42 @@ function on_mods_changed(event)
       global.deployers = new_deployers
     end
   end
+  ]]
+
+  --Migrate deployers and scanners to new mod name
+  if (event and event.mod_changes) and
+  (event.mod_changes["recursive-blueprints"]
+  and event.mod_changes["recursive-blueprints"].old_version) then
+    for _, surface in pairs(game.surfaces) do
+      for _, entity in pairs(surface.find_entities_filtered({name = {"blueprint-deployer", "recursive-blueprints-scanner"}})) do
+        if entity.name == "blueprint-deployer" then
+          global.deployers[entity.unit_number] = entity
+          update_network(entity)
+        elseif entity.name == "recursive-blueprints-scanner" then
+          global.deployers[entity.unit_number] = entity
+          AreaScanner.on_built_scanner(entity, {})
+        end
+      end
+    end
+  end
+
+  --Migrate to new scanner data format.
+  if (event and event.mod_changes)
+  and (event.mod_changes["rec-blue-plus"]
+  and event.mod_changes["rec-blue-plus"].old_version
+  and event.mod_changes["rec-blue-plus"].old_version < "1.3.1") then
+    for _, scanner in pairs(global.scanners or {}) do
+      if not scanner.settings then
+        AreaScanner.on_built_scanner(scanner.entity, {tags = scanner})
+      end
+    end
+  end
+
+  -- Delete signals from uninstalled mods
+  if not global.scanners then global.scanners = {} end
+  for _, scanner in pairs(global.scanners) do
+    AreaScanner.mark_unknown_signals(scanner.settings)
+  end
 
   -- Construction robotics unlocks recipes
   for _, force in pairs(game.forces) do
@@ -68,21 +111,14 @@ function on_mods_changed(event)
     end
   end
 
-  -- Delete signals from uninstalled mods
-  if not global.scanners then global.scanners = {} end
-  for _, scanner in pairs(global.scanners) do
-    mark_unknown_signals(scanner)
-  end
-
   cache_blueprint_signals()
-  cache_scanner_signals()
 end
 
 function on_setting_changed(event)
   if event.setting == "recursive-blueprints-area" then
     -- Refresh scanners
     for _, scanner in pairs(global.scanners) do
-      scan_resources(scanner)
+      AreaScanner.scan_resources(scanner)
     end
   end
 end
@@ -110,7 +146,7 @@ function on_tick()
         network.green = nil
       end
       if network.deployer.name == "recursive-blueprints-scanner" then
-        on_tick_scanner(network)
+        AreaScanner.on_tick_scanner(network)
       else
         on_tick_deployer(network)
       end
@@ -138,7 +174,7 @@ function on_built(event)
   -- Turn on resource scanner
   if entity.name == "recursive-blueprints-scanner" then
     global.deployers[entity.unit_number] = entity
-    on_built_scanner(entity, event)
+    AreaScanner.on_built_scanner(entity, event)
     return
   end
 
@@ -157,50 +193,47 @@ end
 function on_entity_destroyed(event)
   if not event.unit_number then return end
   on_item_request(event.unit_number)
-  on_destroyed_scanner(event.unit_number)
+  AreaScanner.on_destroyed_scanner(event.unit_number)
 end
 
 function on_player_setup_blueprint(event)
-  -- Search the selected area for interesting prototypes
-  -- These prototypes help align the blueprint even if they are not used
-  local player = game.get_player(event.player_index)
-  local entities = player.surface.find_entities_filtered {
-    area = event.area,
-    force = player.force,
-    type = {
-      "locomotive",
-      "cargo-wagon",
-      "fluid-wagon",
-      "artillery-wagon",
-      "straight-rail",
-      "curved-rail",
-      "constant-combinator",
-    },
-  }
-
-  -- Check for scanners and automatic trains
-  local found_tag = false
-  for _, entity in pairs(entities) do
-    if entity.type == "locomotive" and not entity.train.manual_mode then
-      found_tag = true
-      break
-    elseif entity.name == "recursive-blueprints-scanner" then
-      found_tag = true
-      break
-    end
-  end
-  if not found_tag then return end
-
   -- Find the blueprint item
-  local bp = get_blueprint_to_setup(player) or get_nested_blueprint(player.cursor_stack)
-  if not bp or not bp.valid_for_read or not bp.is_blueprint or not bp.is_blueprint_setup() then
+  local player = game.get_player(event.player_index)
+  local bp = nil
+  if player and player.blueprint_to_setup and player.blueprint_to_setup.valid_for_read then bp = player.blueprint_to_setup
+  elseif player and player.cursor_stack.valid_for_read and player.cursor_stack.is_blueprint then bp = player.cursor_stack end
+  if not bp or not bp.is_blueprint_setup() then
     -- Maybe the player is selecting new contents for a blueprint?
     bp = global.blueprints[event.player_index]
   end
 
-  -- Add custom tags to blueprint
-  local tags = create_tags(entities)
-  add_tags_to_blueprint(tags, bp)
+  if bp and bp.is_blueprint_setup() then
+    local mapping = event.mapping.get()
+    local blueprint_entities = bp.get_blueprint_entities()
+    local found = false
+    if blueprint_entities then
+      for _, bp_entity in pairs(blueprint_entities) do
+        local entity = mapping[bp_entity.entity_number]
+        if entity.train and not entity.train.manual_mode then
+          --Add train tags for automatic mode
+          found = true
+          if not bp_entity.tags then bp_entity.tags = {} end
+          bp_entity.tags.automatic_mode = true
+          bp_entity.tags.length = #entity.train.carriages
+
+        elseif bp_entity.name == "recursive-blueprints-scanner" then
+          found = true
+          bp_entity.control_behavior = nil
+          if entity then
+            bp_entity.tags = AreaScanner.serialize(entity)
+          end
+        end
+      end
+      if found then
+        bp.set_blueprint_entities(blueprint_entities)
+      end
+    end
+  end
 end
 
 function on_gui_opened(event)
@@ -218,8 +251,8 @@ function on_gui_opened(event)
   and event.entity
   and event.entity.valid
   and event.entity.name == "recursive-blueprints-scanner" then
-    local player = game.get_player(event.player_index)
-    player.opened = create_scanner_gui(player, event.entity)
+    local player = game.players[event.player_index]
+    player.opened = AreaScannerGUI.create_scanner_gui(player, event.entity)
   end
 end
 
@@ -229,7 +262,7 @@ function on_gui_closed(event)
   and event.element
   and event.element.valid
   and event.element.name == "recursive-blueprints-scanner" then
-    destroy_gui(event.element)
+    AreaScannerGUI.destroy_gui(event.element)
   end
 end
 
@@ -237,23 +270,23 @@ function on_gui_click(event)
   if not event.element.valid then return end
   local name = event.element.name
   if not name then return end
-  if name:sub(1, 21) ~= "recursive-blueprints-" then return end
 
   if name == "recursive-blueprints-close" then
     -- Remove gui
-    destroy_gui(event.element)
-  elseif name:sub(1, 29) == "recursive-blueprints-scanner-" then
+    AreaScannerGUI.destroy_gui(event.element)
+  elseif name == "recursive-blueprints-signal-select-button" then
     -- Open the signal gui to pick a value
-    create_signal_gui(event.element)
+    AreaScannerGUI.create_signal_gui(event.element)
   elseif name == "recursive-blueprints-set-constant" then
     -- Copy constant value back to scanner gui
-    set_scanner_value(event.element)
-  elseif name:sub(1, 28) == "recursive-blueprints-signal-" then
-    -- Copy signal back to scanner gui
-    set_scanner_signal(event.element)
-  elseif name:sub(1, 32) == "recursive-blueprints-tab-button-" then
-    -- Switch tabs
-    set_signal_gui_tab(event.element, tonumber(name:sub(33)))
+    AreaScannerGUI.set_scanner_value(event.element)
+  elseif name == "" and event.element.tags then
+    local tags = event.element.tags
+    if tags["recursive-blueprints-signal"] then
+      AreaScannerGUI.set_scanner_signal(event.element)
+    elseif tags["recursive-blueprints-tab-index"] then
+      GUI_util.select_tab_by_index(event.element, tags["recursive-blueprints-tab-index"])
+    end
   end
 end
 
@@ -264,7 +297,7 @@ function on_gui_confirmed(event)
 
   if name == "recursive-blueprints-constant" then
     -- Copy constant value back to scanner gui
-    set_scanner_value(event.element)
+    AreaScannerGUI.set_scanner_value(event.element)
   end
 end
 
@@ -275,7 +308,7 @@ function on_gui_text_changed(event)
 
   if name == "recursive-blueprints-constant" then
     -- Update slider
-    copy_text_value(event.element)
+    AreaScannerGUI.copy_text_value(event.element)
   end
 end
 
@@ -286,7 +319,7 @@ function on_gui_value_changed(event)
 
   if name == "recursive-blueprints-slider" then
     -- Update number field
-    copy_slider_value(event.element)
+    AreaScannerGUI.copy_slider_value(event.element)
   end
 end
 

@@ -73,7 +73,7 @@ data:extend{
     icon = "__rec-blue-plus__/graphics/scanner-icon.png",
     icon_mipmaps = 4,
     icon_size = 64,
-    item_slot_count = 10,
+    item_slot_count = 10, -- Will be changed in data-updates.lua
     max_health = 200,
     minable = {mining_time = 0.1, result = "recursive-blueprints-scanner"},
     open_sound = accumulator.open_sound,
