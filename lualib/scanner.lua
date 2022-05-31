@@ -128,15 +128,14 @@ function AreaScanner.serialize(entity)
     tags.settings = util.table.deepcopy(scanner.settings)
     --Adding old format tags.
     local scan_area = scanner.settings.scan_area
-      for i in {"x", "y", "width", "height"} do
-        if type(scan_area[i]) == "number" then
-          tags[i] = scan_area[i]
-          tags[i.."_signal"] = nil
-        else
-          tags[i] = 0
-          tags[i.."_signal"] = scan_area[i]
-        end
+    for _, i in pairs({"x", "y", "width", "height"}) do
+      if type(scan_area[i]) == "number" then
+        tags[i] = scan_area[i]
+      else
+        tags[i] = 0
+        tags[i.."_signal"] = {type = scan_area[i].type, name = scan_area[i].name}
       end
+    end
     return tags
   end
   return nil
