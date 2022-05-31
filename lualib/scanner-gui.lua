@@ -445,6 +445,17 @@ function AreaScannerGUI.copy_text_value(element)
   element.parent["recursive-blueprints-slider"].slider_value = value
 end
 
+function AreaScannerGUI.counter_checkbox_change(element)
+  local screen = element.gui.screen
+  local scanner_gui = screen["recursive-blueprints-scanner"]
+  if not scanner_gui then return end
+  local scanner = global.scanners[scanner_gui.tags["recursive-blueprints-id"]]
+  local key = element.parent.children[2].tags.name
+  scanner.settings.counters[key].is_negative = element.state
+  AreaScanner.scan_resources(scanner)
+  AreaScannerGUI.update_scanner_gui(scanner_gui)
+end
+
 -- Display all constant-combinator output signals in the gui
 function AreaScannerGUI.update_scanner_output(output_flow, entity)
   local behavior = entity.get_control_behavior()
@@ -492,8 +503,8 @@ function AreaScannerGUI.update_scanner_gui(gui)
   local y = scanner.previous.y
   if settings.global["recursive-blueprints-area"].value == "corner" then
     -- Convert from top left corner to center
-    x = x + math.floor(scanner.width/2)
-    y = y + math.floor(scanner.height/2)
+    x = x + math.floor(scanner.previous.width/2)
+    y = y + math.floor(scanner.previous.height/2)
   end
   local minimap = gui.children[2].children[1].children[2].children[2].children[1]
   minimap.position = {

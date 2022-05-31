@@ -6,7 +6,7 @@ GUI_util = require "lualib.gui-util"
 AreaScannerGUI = require "lualib.scanner-gui"
 AreaScanner = require "lualib.scanner"
 
-function on_init()
+local function on_init()
   global.deployers = {}
   global.fuel_requests = {}
   global.networks = {}
@@ -17,7 +17,7 @@ function on_init()
   cache_blueprint_signals()
 end
 
-function on_mods_changed(event)
+local function on_mods_changed(event)
   --global.deployer_index = nil
   --if not global.networks then global.networks = {} end
   global.blueprints = {}
@@ -114,7 +114,7 @@ function on_mods_changed(event)
   cache_blueprint_signals()
 end
 
-function on_setting_changed(event)
+local function on_setting_changed(event)
   if event.setting == "recursive-blueprints-area" then
     -- Refresh scanners
     for _, scanner in pairs(global.scanners) do
@@ -123,7 +123,7 @@ function on_setting_changed(event)
   end
 end
 
-function on_tick()
+local function on_tick()
   -- Check one deployer per tick for new circuit network connections
   local index = global.deployer_index
   global.deployer_index = next(global.deployers, global.deployer_index)
@@ -154,7 +154,7 @@ function on_tick()
   end
 end
 
-function on_built(event)
+local function on_built(event)
   local entity = event.created_entity or event.entity or event.destination
   if not entity or not entity.valid then return end
 
@@ -190,13 +190,13 @@ function on_built(event)
   end
 end
 
-function on_entity_destroyed(event)
+local function on_entity_destroyed(event)
   if not event.unit_number then return end
   on_item_request(event.unit_number)
   AreaScanner.on_destroyed_scanner(event.unit_number)
 end
 
-function on_player_setup_blueprint(event)
+local function on_player_setup_blueprint(event)
   -- Find the blueprint item
   local player = game.get_player(event.player_index)
   local bp = nil
@@ -236,7 +236,7 @@ function on_player_setup_blueprint(event)
   end
 end
 
-function on_gui_opened(event)
+local function on_gui_opened(event)
   -- Save a reference to the blueprint item in case the player selects new contents
   global.blueprints[event.player_index] = nil
   if event.gui_type == defines.gui_type.item
@@ -256,7 +256,7 @@ function on_gui_opened(event)
   end
 end
 
-function on_gui_closed(event)
+local function on_gui_closed(event)
   -- Remove scanner gui
   if event.gui_type == defines.gui_type.custom
   and event.element
@@ -266,7 +266,7 @@ function on_gui_closed(event)
   end
 end
 
-function on_gui_click(event)
+local function on_gui_click(event)
   if not event.element.valid then return end
   local name = event.element.name
   if not name then return end
@@ -290,7 +290,7 @@ function on_gui_click(event)
   end
 end
 
-function on_gui_confirmed(event)
+local function on_gui_confirmed(event)
   if not event.element.valid then return end
   local name = event.element.name
   if not name then return end
@@ -301,7 +301,7 @@ function on_gui_confirmed(event)
   end
 end
 
-function on_gui_text_changed(event)
+local function on_gui_text_changed(event)
   if not event.element.valid then return end
   local name = event.element.name
   if not name then return end
@@ -312,7 +312,7 @@ function on_gui_text_changed(event)
   end
 end
 
-function on_gui_value_changed(event)
+local function on_gui_value_changed(event)
   if not event.element.valid then return end
   local name = event.element.name
   if not name then return end
@@ -320,6 +320,15 @@ function on_gui_value_changed(event)
   if name == "recursive-blueprints-slider" then
     -- Update number field
     AreaScannerGUI.copy_slider_value(event.element)
+  end
+end
+
+local function on_gui_checked_state_changed(event)
+  if not event.element.valid then return end
+  local name = event.element.name
+  if not name then return end
+  if name == "recursive-blueprints-counter-checkbox" then
+    AreaScannerGUI.counter_checkbox_change(event.element)
   end
 end
 
@@ -336,6 +345,7 @@ script.on_event(defines.events.on_gui_value_changed, on_gui_value_changed)
 script.on_event(defines.events.on_player_setup_blueprint, on_player_setup_blueprint)
 script.on_event(defines.events.on_entity_destroyed, on_entity_destroyed)
 script.on_event(defines.events.on_runtime_mod_setting_changed, on_setting_changed)
+script.on_event(defines.events.on_gui_checked_state_changed, on_gui_checked_state_changed)
 
 -- Ignore ghost build events
 local filter = {{filter = "ghost", invert = true}}
