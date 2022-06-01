@@ -298,6 +298,8 @@ local function on_gui_confirmed(event)
   if name == "recursive-blueprints-constant" then
     -- Copy constant value back to scanner gui
     AreaScannerGUI.set_scanner_value(event.element)
+  elseif name == "recursive-blueprints-filter-constant" then
+    AreaScannerGUI.set_scanner_value(event.element)
   end
 end
 
@@ -309,6 +311,8 @@ local function on_gui_text_changed(event)
   if name == "recursive-blueprints-constant" then
     -- Update slider
     AreaScannerGUI.copy_text_value(event.element)
+  elseif name == "recursive-blueprints-filter-constant" then
+    AreaScannerGUI.copy_filter_text_value(event.element)
   end
 end
 
@@ -329,6 +333,11 @@ local function on_gui_checked_state_changed(event)
   if not name then return end
   if name == "recursive-blueprints-counter-checkbox" then
     AreaScannerGUI.counter_checkbox_change(event.element)
+  elseif name == "" and event.element.tags then
+    local tags = event.element.tags
+    if tags["recursive-blueprints-filter-checkbox-field"] then
+      AreaScannerGUI.copy_filter_value(event.element)
+    end
   end
 end
 

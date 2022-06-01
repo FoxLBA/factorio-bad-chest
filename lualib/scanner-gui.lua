@@ -1,5 +1,13 @@
 local AreaScannerGUI = {}
 
+AreaScannerGUI.FILTER_NANES = {
+  show_resources = "resources",
+  show_environment = "trees_and_rocks",
+  show_buildings = "buildings",
+  show_ghosts = "ghosts",
+  show_items_on_ground = "items_on_ground",
+}
+
 -- Build the scanner gui
 function AreaScannerGUI.create_scanner_gui(player, entity)
   local scanner = global.scanners[entity.unit_number]
@@ -178,7 +186,6 @@ function AreaScannerGUI.add_counter_setting_line(element, name)
   }
 end
 
----TODO: made "Set a constant" frame for filter
 ---Build the "select a signal or constant" gui
 ---@param element table The sprite button that opened this menu
 function AreaScannerGUI.create_signal_gui(element)
@@ -214,11 +221,13 @@ function AreaScannerGUI.create_signal_gui(element)
   end
 
   -- Heading
+  local gui_direction = "vertical"
+  if field == "filter" then gui_direction = "horizontal" end
   local gui = screen.add{
     type = "frame",
     name = "recursive-blueprints-signal",
     style = "invisible_frame",
-    direction = "vertical",
+    direction = gui_direction,
     tags = {
       ["recursive-blueprints-id"] = id,
       ["recursive-blueprints-field"] = field,
@@ -230,59 +239,121 @@ function AreaScannerGUI.create_signal_gui(element)
   GUI_util.add_titlebar(signal_select, gui, {"gui.select-signal"}, "recursive-blueprints-close")
   GUI_util.add_signal_select_frame(signal_select, target)
 
-  if field_type == "output" then return gui end
-  -- Set a constant
-  local set_constant = gui.add{type = "frame", direction = "vertical"}
-  GUI_util.add_titlebar(set_constant, gui, {"gui.or-set-a-constant"})
-  local inner_frame = set_constant.add{
-    type = "frame",
-    style = "entity_frame",
-    direction = "horizontal",
-  }
-  inner_frame.style.vertical_align = "center"
+  if field_type == "input" and field ~= "filter" then
+    -- Set a constant
+    local set_constant = gui.add{type = "frame", direction = "vertical"}
+    GUI_util.add_titlebar(set_constant, gui, {"gui.or-set-a-constant"})
+    local inner_frame = set_constant.add{type = "frame", style = "entity_frame", direction = "horizontal"}
+    inner_frame.style.vertical_align = "center"
 
-  -- Slider settings
-  local maximum_value = 28  -- 10 * log(999)
-  local allow_negative = false
-  if (field == "x" or field == "y") then
-    maximum_value = 74  -- 2 * 10 * log(10000)
-    allow_negative = true
+    -- Slider settings
+    local maximum_value = 28  -- 10 * log(999)
+    local allow_negative = false
+    if (field == "x" or field == "y") then
+      maximum_value = 74  -- 2 * 10 * log(10000)
+      allow_negative = true
+    end
+
+    -- Slider
+    local slider = inner_frame.add{
+      type = "slider",
+      name = "recursive-blueprints-slider",
+      maximum_value = maximum_value,
+    }
+    slider.style.top_margin = 8
+    slider.style.bottom_margin = 8
+
+    -- Text field
+    local textfield = inner_frame.add{
+      type = "textfield",
+      name = "recursive-blueprints-constant",
+      numeric = true,
+      allow_negative = allow_negative,
+    }
+    textfield.style.width = 80
+    textfield.style.horizontal_align = "center"
+    if type(scanner.settings.scan_area[field]) == "table" then
+      textfield.text = "0"
+    else
+      textfield.text = tostring(scanner.settings.scan_area[field])
+    end
+    AreaScannerGUI.copy_text_value(textfield)
+
+    -- Submit button
+    local filler = inner_frame.add{type = "empty-widget"}
+    filler.style.horizontally_stretchable = "on"
+    inner_frame.add{
+      type = "button",
+      style = "recursive-blueprints-set-button",
+      name = "recursive-blueprints-set-constant",
+      caption = {"gui.set"},
+    }
+  elseif field == "filter" then
+    local set_filter = gui.add{type = "frame", direction = "vertical"}
+    GUI_util.add_titlebar(set_filter, gui, {"gui.or-set-a-constant"})
+    local inner_frame = set_filter.add{type = "frame", style = "entity_frame", direction = "vertical"}
+    inner_frame.style.minimal_width = 0
+    local options_flow = inner_frame.add{type = "flow", direction = "horizontal"}
+    local filters_flow = options_flow.add{type = "flow", direction = "vertical"}
+    filters_flow.add{
+      type = "label",
+      style = "heading_2_label",
+      caption = "Filters"
+    }
+    for name, state in pairs(scanner.settings.filters) do
+      filters_flow.add{
+        type = "checkbox",
+        state = state,
+        caption = {"description.recursive-blueprints-counter-name-"..AreaScannerGUI.FILTER_NANES[name]},
+        tags = {
+          ["recursive-blueprints-filter-checkbox-field"] = name,
+          ["recursive-blueprints-filter-checkbox-type"] = "filters"
+        }
+      }
+    end
+    --options_flow.add{type = "line", direction = "vertical"}
+    local counters_flow = options_flow.add{type = "flow", direction = "vertical"}
+    counters_flow.style.left_margin = 10
+    counters_flow.add{
+      type = "label",
+      style = "heading_2_label",
+      caption = "Counters"
+    }
+    for name, counter in pairs(scanner.settings.counters) do
+      counters_flow.add{
+        type = "checkbox",
+        state = counter.is_shown,
+        caption = {"description.recursive-blueprints-counter-name-"..name},
+        tooltip = {"description.recursive-blueprints-counter-tooltip-"..name},
+        tags = {
+          ["recursive-blueprints-filter-checkbox-field"] = name,
+          ["recursive-blueprints-filter-checkbox-type"] = "counters"
+        }
+      }
+    end
+
+    -- Text field
+    local filter_end_line = inner_frame.add{type = "flow", direction = "horizontal"}
+    filter_end_line.add{type = "empty-widget"} -- needed for set_scanner_value function
+    local textfield = filter_end_line.add{
+      type = "textfield",
+      name = "recursive-blueprints-filter-constant",
+      numeric = true,
+      allow_negative = true,
+    }
+    textfield.style.width = 100
+    textfield.style.horizontal_align = "center"
+    textfield.text = tostring(AreaScanner.get_filter_mask(scanner.settings))
+    -- Submit button
+    local filler = filter_end_line.add{type = "empty-widget"}
+    filler.style.horizontally_stretchable = "on"
+    filter_end_line.add{
+      type = "button",
+      style = "recursive-blueprints-set-button",
+      name = "recursive-blueprints-set-constant",
+      caption = {"gui.set"},
+    }
   end
-
-  -- Slider
-  local slider = inner_frame.add{
-    type = "slider",
-    name = "recursive-blueprints-slider",
-    maximum_value = maximum_value,
-  }
-  slider.style.top_margin = 8
-  slider.style.bottom_margin = 8
-
-  -- Text field
-  local textfield = inner_frame.add{
-    type = "textfield",
-    name = "recursive-blueprints-constant",
-    numeric = true,
-    allow_negative = allow_negative,
-  }
-  textfield.style.width = 80
-  textfield.style.horizontal_align = "center"
-  if type(scanner.settings.scan_area[field]) == "table" then
-    textfield.text = "0"
-  else
-    textfield.text = tostring(scanner.settings.scan_area[field])
-  end
-  AreaScannerGUI.copy_text_value(textfield)
-
-  -- Submit button
-  local filler = inner_frame.add{type = "empty-widget"}
-  filler.style.horizontally_stretchable = "on"
-  inner_frame.add{
-    type = "button",
-    style = "recursive-blueprints-set-button",
-    name = "recursive-blueprints-set-constant",
-    caption = {"gui.set"},
-  }
 
   return gui
 end
@@ -443,6 +514,49 @@ function AreaScannerGUI.copy_text_value(element)
     end
   end
   element.parent["recursive-blueprints-slider"].slider_value = value
+end
+
+-- Copy value from filter checkboxes to text field
+function AreaScannerGUI.copy_filter_value(element)
+  local settings = {filters = {}, counters = {}}
+  for _, flow in pairs(element.parent.parent.children) do
+    for _, c_element in pairs(flow.children) do
+      if c_element.type == "checkbox" then
+        local f_type = c_element.tags["recursive-blueprints-filter-checkbox-type"]
+        local f_name = c_element.tags["recursive-blueprints-filter-checkbox-field"]
+        if f_type == "filters" then
+          settings[f_type][f_name] = c_element.state
+        else
+          settings[f_type][f_name] = {is_shown = c_element.state}
+        end
+      end
+    end
+  end
+  local textfield = element.parent.parent.parent.children[2].children[2]
+  textfield.text = tostring(AreaScanner.get_filter_mask(settings))
+end
+
+-- Copy value from text field to filter checkboxes
+function AreaScannerGUI.copy_filter_text_value(element)
+  local settings = {filters = {}, counters = {}}
+  for name, _ in pairs(AreaScanner.DEFAULT_SCANNER_SETTINGS.counters) do
+    settings.counters[name] = {}
+  end
+  local text_value = tonumber(element.text) or 0
+  AreaScanner.set_filter_mask(settings, text_value)
+  for _, flow in pairs(element.parent.parent.children[1].children) do
+    for _, c_element in pairs(flow.children) do
+      if c_element.type == "checkbox" then
+        local f_type = c_element.tags["recursive-blueprints-filter-checkbox-type"]
+        local f_name = c_element.tags["recursive-blueprints-filter-checkbox-field"]
+        if f_type == "filters" then
+          c_element.state = settings[f_type][f_name]
+        else
+          c_element.state = settings[f_type][f_name].is_shown
+        end
+      end
+    end
+  end
 end
 
 function AreaScannerGUI.counter_checkbox_change(element)
