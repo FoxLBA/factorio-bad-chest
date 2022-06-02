@@ -280,6 +280,8 @@ local function on_gui_click(event)
   elseif name == "recursive-blueprints-set-constant" then
     -- Copy constant value back to scanner gui
     AreaScannerGUI.set_scanner_value(event.element)
+  elseif name == "recursive-blueprints-counter-settings" then
+    AreaScannerGUI.toggle_counter_settings_frame(event.element)
   elseif name == "" and event.element.tags then
     local tags = event.element.tags
     if tags["recursive-blueprints-signal"] then

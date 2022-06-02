@@ -27,15 +27,15 @@ function AreaScannerGUI.create_scanner_gui(player, entity)
   local gui = player.gui.screen.add{
     type = "frame",
     name = "recursive-blueprints-scanner",
-    direction = "vertical",
+    style = "invisible_frame",
+    direction = "horizontal",
     tags = {["recursive-blueprints-id"] = entity.unit_number}
   }
   gui.auto_center = true
+  local main_frame = gui.add{type = "frame", direction = "vertical"}
 
-  GUI_util.add_titlebar(gui, gui, entity.localised_name, "recursive-blueprints-close", {"gui.close-instruction"})
-  local outer_flow = gui.add{type = "flow"}
-
-  local inner_frame = outer_flow.add{type = "frame", direction = "vertical", style = "entity_frame"}
+  GUI_util.add_titlebar(main_frame, gui, entity.localised_name, "recursive-blueprints-close", {"gui.close-instruction"})
+  local inner_frame = main_frame.add{type = "frame", direction = "vertical", style = "entity_frame"}
   GUI_util.add_status_indicator(inner_frame, entity)
 
   -- Scan area (settings and minimap)
@@ -76,11 +76,23 @@ function AreaScannerGUI.create_scanner_gui(player, entity)
   inner_frame.add{type = "line"}
 
   -- Output signals
-  inner_frame.add{
+  local o_line =  inner_frame.add{type = "flow"}
+  o_line.add{
     type = "label",
     style = "heading_3_label",
     caption = {"description.output-signals"},
   }
+  local toggle_settings = o_line.add{
+    type = "sprite-button",
+    name = "recursive-blueprints-counter-settings",
+    style = "frame_action_button",
+    sprite = "utility/side_menu_menu_icon",
+    hovered_sprite = "utility/change_recipe",
+    clicked_sprite = "utility/change_recipe",
+    tooltip = {"recursive-blueprints.counter-settings"},
+  }
+  toggle_settings.style.left_margin = 5
+
   local scroll_pane = inner_frame.add{
     type = "scroll-pane",
     style = "recursive-blueprints-scroll",
@@ -110,17 +122,18 @@ function AreaScannerGUI.create_scanner_gui(player, entity)
   end
 
   -- Output settings
-  local inner_frame2 = outer_flow.add{type = "frame", direction = "vertical", style = "entity_frame"}
+  local counters_frame = gui.add{type = "frame", direction = "vertical", visible = false}
+  GUI_util.add_titlebar(counters_frame, gui, {"recursive-blueprints.counter-settings"})
+  local inner_frame2 = counters_frame.add{type = "frame", direction = "vertical", style = "entity_frame"}
   inner_frame2.style.minimal_width = 0
-  inner_frame2.style.left_margin = 6
-  inner_frame2.style.vertically_stretchable = true
   --inner_frame2.style.maximal_height = 600
 
   local output_settings_header = inner_frame2.add{type="flow"}
   output_settings_header.add{
     type = "label",
     style = "heading_2_label",
-    caption = {"description.output-signals"},
+    caption = {"", {"description.output-signals"}, " [img=info]"},
+    tooltip = {"recursive-blueprints.counter-settings-tooltip"}
   }
   local filler = output_settings_header.add{type = "empty-widget"}
   filler.style.horizontally_stretchable = true
@@ -131,7 +144,7 @@ function AreaScannerGUI.create_scanner_gui(player, entity)
     sprite = "utility/reset",
     hovered_sprite = "utility/reset",
     clicked_sprite = "utility/reset",
-    tooltip = {"description.recursive-blueprints-reset-scanner-counters-settings"},
+    tooltip = {"recursive-blueprints.reset-scanner-counters-settings"},
     enabled = false,
     visible = false,
   }
@@ -172,7 +185,7 @@ function AreaScannerGUI.add_counter_setting_line(element, name)
   flow.add{
     type = "checkbox", state = false, style = "recursive-blueprints-checkbox-minus",
     name = "recursive-blueprints-counter-checkbox",
-    tooltip = {"description.recursive-blueprints-counter-negative-checkbox"}
+    tooltip = {"recursive-blueprints.counter-negative-checkbox"}
   }
   flow.add{
     type = "sprite-button", style = "recursive-blueprints-slot",
@@ -181,8 +194,8 @@ function AreaScannerGUI.add_counter_setting_line(element, name)
   }
   flow.add{
     type = "label",
-    caption = {"description.recursive-blueprints-counter-name-"..name},
-    tooltip = {"description.recursive-blueprints-counter-tooltip-"..name}
+    caption = {"recursive-blueprints.counter-name-"..name},
+    tooltip = {"recursive-blueprints.counter-tooltip-"..name}
   }
 end
 
@@ -288,6 +301,7 @@ function AreaScannerGUI.create_signal_gui(element)
       name = "recursive-blueprints-set-constant",
       caption = {"gui.set"},
     }
+
   elseif field == "filter" then
     local set_filter = gui.add{type = "frame", direction = "vertical"}
     GUI_util.add_titlebar(set_filter, gui, {"gui.or-set-a-constant"})
@@ -304,7 +318,7 @@ function AreaScannerGUI.create_signal_gui(element)
       filters_flow.add{
         type = "checkbox",
         state = state,
-        caption = {"description.recursive-blueprints-counter-name-"..AreaScannerGUI.FILTER_NANES[name]},
+        caption = {"recursive-blueprints.counter-name-"..AreaScannerGUI.FILTER_NANES[name]},
         tags = {
           ["recursive-blueprints-filter-checkbox-field"] = name,
           ["recursive-blueprints-filter-checkbox-type"] = "filters"
@@ -323,8 +337,8 @@ function AreaScannerGUI.create_signal_gui(element)
       counters_flow.add{
         type = "checkbox",
         state = counter.is_shown,
-        caption = {"description.recursive-blueprints-counter-name-"..name},
-        tooltip = {"description.recursive-blueprints-counter-tooltip-"..name},
+        caption = {"recursive-blueprints.counter-name-"..name},
+        tooltip = {"recursive-blueprints.counter-tooltip-"..name},
         tags = {
           ["recursive-blueprints-filter-checkbox-field"] = name,
           ["recursive-blueprints-filter-checkbox-type"] = "counters"
@@ -362,7 +376,7 @@ end
 function AreaScannerGUI.reset_scanner_gui_style(screen)
   local gui = screen["recursive-blueprints-scanner"]
   if not gui then return end
-  local input_flow = gui.children[2].children[1].children[2].children[1].children[2]
+  local input_flow = gui.children[1].children[2].children[2].children[1].children[2]
   for i = 1, #input_flow.children do
     input_flow.children[i].children[2].style = "recursive-blueprints-slot"
   end
@@ -570,6 +584,11 @@ function AreaScannerGUI.counter_checkbox_change(element)
   AreaScannerGUI.update_scanner_gui(scanner_gui)
 end
 
+function AreaScannerGUI.toggle_counter_settings_frame(element)
+  local gui = GUI_util.get_root_element(element)
+  gui.children[2].visible = not gui.children[2].visible
+end
+
 -- Display all constant-combinator output signals in the gui
 function AreaScannerGUI.update_scanner_output(output_flow, entity)
   local behavior = entity.get_control_behavior()
@@ -605,7 +624,7 @@ function AreaScannerGUI.update_scanner_gui(gui)
   if not scanner.entity.valid then return end
 
   -- Update area dimensions
-  local input_flow = gui.children[2].children[1].children[2].children[1].children[2]
+  local input_flow = gui.children[1].children[2].children[2].children[1].children[2]
   GUI_util.set_slot_button(input_flow.children[1].children[2], scanner.previous.x,      scanner.settings.scan_area.x)
   GUI_util.set_slot_button(input_flow.children[2].children[2], scanner.previous.y,      scanner.settings.scan_area.y)
   GUI_util.set_slot_button(input_flow.children[3].children[2], scanner.previous.width,  scanner.settings.scan_area.width)
@@ -620,7 +639,7 @@ function AreaScannerGUI.update_scanner_gui(gui)
     x = x + math.floor(scanner.previous.width/2)
     y = y + math.floor(scanner.previous.height/2)
   end
-  local minimap = gui.children[2].children[1].children[2].children[2].children[1]
+  local minimap = gui.children[1].children[2].children[2].children[2].children[1]
   minimap.position = {
     scanner.entity.position.x + x,
     scanner.entity.position.y + y,
@@ -631,7 +650,7 @@ function AreaScannerGUI.update_scanner_gui(gui)
   minimap.style.natural_width = scanner.previous.width / largest * 256
   minimap.style.natural_height = scanner.previous.height / largest * 256
 
-  AreaScannerGUI.update_scanner_output(gui.children[2].children[1].children[5].children[1], scanner.entity)
+  AreaScannerGUI.update_scanner_output(gui.children[1].children[2].children[5].children[1], scanner.entity)
 
   local settings_lines = gui.children[2].children[2].children[2]
   for i = 1, #settings_lines.children do
