@@ -139,14 +139,12 @@ function AreaScannerGUI.create_scanner_gui(player, entity)
   filler.style.horizontally_stretchable = true
   output_settings_header.add{
     type = "sprite-button",
-    name = "recursive-blueprints-reset",
+    name = "recursive-blueprints-reset-counters",
     style = "tool_button_red",
     sprite = "utility/reset",
     hovered_sprite = "utility/reset",
     clicked_sprite = "utility/reset",
     tooltip = {"recursive-blueprints.reset-scanner-counters-settings"},
-    enabled = false,
-    visible = false,
   }
   local settings_lines = inner_frame2.add{
     direction = "vertical",
@@ -587,6 +585,17 @@ end
 function AreaScannerGUI.toggle_counter_settings_frame(element)
   local gui = GUI_util.get_root_element(element)
   gui.children[2].visible = not gui.children[2].visible
+end
+
+function AreaScannerGUI.reset_counter_settings(element)
+  local scanner_gui = GUI_util.get_root_element(element)
+  local scanner = global.scanners[scanner_gui.tags["recursive-blueprints-id"]]
+  for name, counter in pairs(AreaScanner.DEFAULT_SCANNER_SETTINGS.counters) do
+    scanner.settings.counters[name].is_negative = counter.is_negative
+    scanner.settings.counters[name].signal = {type = counter.signal.type, name = counter.signal.name}
+  end
+  AreaScanner.scan_resources(scanner)
+  AreaScannerGUI.update_scanner_gui(scanner_gui)
 end
 
 -- Display all constant-combinator output signals in the gui
