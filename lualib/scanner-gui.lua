@@ -122,7 +122,7 @@ function AreaScannerGUI.create_scanner_gui(player, entity)
   end
 
   -- Output settings
-  local counters_frame = gui.add{type = "frame", direction = "vertical", visible = false}
+  local counters_frame = gui.add{type = "frame", direction = "vertical"}
   GUI_util.add_titlebar(counters_frame, gui, {"recursive-blueprints.counter-settings"})
   local inner_frame2 = counters_frame.add{type = "frame", direction = "vertical", style = "entity_frame"}
   inner_frame2.style.minimal_width = 0
@@ -160,6 +160,7 @@ function AreaScannerGUI.create_scanner_gui(player, entity)
 
   -- Display current values
   AreaScannerGUI.update_scanner_gui(gui)
+  counters_frame.visible = false
   return gui
 end
 
@@ -631,40 +632,44 @@ function AreaScannerGUI.update_scanner_gui(gui)
   local scanner = global.scanners[gui.tags["recursive-blueprints-id"]]
   if not scanner then return end
   if not scanner.entity.valid then return end
+  local scan_area = scanner.previous
 
   -- Update area dimensions
   local input_flow = gui.children[1].children[2].children[2].children[1].children[2]
-  GUI_util.set_slot_button(input_flow.children[1].children[2], scanner.previous.x,      scanner.settings.scan_area.x)
-  GUI_util.set_slot_button(input_flow.children[2].children[2], scanner.previous.y,      scanner.settings.scan_area.y)
-  GUI_util.set_slot_button(input_flow.children[3].children[2], scanner.previous.width,  scanner.settings.scan_area.width)
-  GUI_util.set_slot_button(input_flow.children[4].children[2], scanner.previous.height, scanner.settings.scan_area.height)
-  GUI_util.set_slot_button(input_flow.children[5].children[2], scanner.previous.filter, scanner.settings.scan_area.filter)
+  GUI_util.set_slot_button(input_flow.children[1].children[2], scanner.settings.scan_area.x)
+  GUI_util.set_slot_button(input_flow.children[2].children[2], scanner.settings.scan_area.y)
+  GUI_util.set_slot_button(input_flow.children[3].children[2], scanner.settings.scan_area.width)
+  GUI_util.set_slot_button(input_flow.children[4].children[2], scanner.settings.scan_area.height)
+  GUI_util.set_slot_button(input_flow.children[5].children[2], scanner.settings.scan_area.filter)
 
   -- Update minimap
-  local x = scanner.previous.x
-  local y = scanner.previous.y
+  local x = scan_area.x
+  local y = scan_area.y
+  if scan_area.width % 2 ~= 0 then x = x + 0.5 end -- Align to grid
+  if scan_area.height % 2 ~= 0 then y = y + 0.5 end
   if settings.global["recursive-blueprints-area"].value == "corner" then
     -- Convert from top left corner to center
-    x = x + math.floor(scanner.previous.width/2)
-    y = y + math.floor(scanner.previous.height/2)
+    x = x + math.floor(scan_area.width/2)
+    y = y + math.floor(scan_area.height/2)
   end
   local minimap = gui.children[1].children[2].children[2].children[2].children[1]
   minimap.position = {
     scanner.entity.position.x + x,
-    scanner.entity.position.y + y,
+    scanner.entity.position.y + y
   }
-  local largest = math.max(scanner.previous.width, scanner.previous.height)
+  local largest = math.max(scan_area.width, scan_area.height)
   if largest == 0 then largest = 32 end
   minimap.zoom = 256 / largest
-  minimap.style.natural_width = scanner.previous.width / largest * 256
-  minimap.style.natural_height = scanner.previous.height / largest * 256
+  minimap.style.natural_width = scan_area.width / largest * 256
+  minimap.style.natural_height = scan_area.height / largest * 256
 
   AreaScannerGUI.update_scanner_output(gui.children[1].children[2].children[5].children[1], scanner.entity)
 
+  if not gui.children[2].visible then return end
   local settings_lines = gui.children[2].children[2].children[2]
   for i = 1, #settings_lines.children do
     local sprite_button = settings_lines.children[i].children[2]
-    GUI_util.set_slot_button(sprite_button, 0, scanner.settings.counters[sprite_button.tags.name].signal)
+    GUI_util.set_slot_button(sprite_button, scanner.settings.counters[sprite_button.tags.name].signal)
     settings_lines.children[i].children[1].state = scanner.settings.counters[sprite_button.tags.name].is_negative
   end
 end

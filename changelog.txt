@@ -1,4 +1,13 @@
 ---------------------------------------------------------------------------------------------------
+Version: 1.3.5
+Date: ????
+  Bugfixes:
+    - Fixed "Trees and rocks" counter not counting anything.
+    - Fixed not performing a scan when selecting the filter only "Water" and/or "Uncharted chuncs".
+  Changes:
+    - Raw resources counter now count nomber of spots instead of the sum of the resources received.
+    - Scanner optimization.
+---------------------------------------------------------------------------------------------------
 Version: 1.3.4
 Date: 2022-06-02
   Changes:

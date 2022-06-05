@@ -2,6 +2,7 @@ require "util"
 require "lualib.logging"
 require "lualib.common"
 require "lualib.deployer"
+RB_util = require "lualib.rb-util"
 GUI_util = require "lualib.gui-util"
 AreaScannerGUI = require "lualib.scanner-gui"
 AreaScanner = require "lualib.scanner"
@@ -160,7 +161,7 @@ local function on_built(event)
 
   -- Support automatic mode for trains
   if entity.train then
-    on_built_carriage(entity, event.tags)
+    RB_util.on_built_carriage(entity, event.tags)
     return
   end
 
@@ -192,7 +193,7 @@ end
 
 local function on_entity_destroyed(event)
   if not event.unit_number then return end
-  on_item_request(event.unit_number)
+  RB_util.on_item_request(event.unit_number)
   AreaScanner.on_destroyed_scanner(event.unit_number)
 end
 
