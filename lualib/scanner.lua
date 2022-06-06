@@ -307,7 +307,21 @@ function AreaScanner.scan_resources(scanner)
     }
   end
 
-  local scans = AreaScanner.scan_area(surface, scan_area, force, forces, counters)
+  local areas, uncharted = RB_util.find_charted_areas(force, surface, scan_area)
+  local scans
+  if #areas == 1 then --Both scanning functions must be consistent!
+    scans = AreaScanner.scan_area_no_hash(surface, areas[1], force, forces, counters)
+  else
+    scans = AreaScanner.scan_area(surface, areas, force, forces, counters)
+  end
+  scans.counters.uncharted = uncharted
+  if counters.water.is_shown then
+    local water = 0
+    for _, area in pairs(areas)do
+      water = water + surface.count_tiles_filtered{area = area, collision_mask = "water-tile"}
+    end
+    scans.counters.water = water
+  end
 
   local result1 = {item = {}, fluid = {}, virtual = {}}
   local result2 = {item = {}, fluid = {}, virtual = {}}
@@ -381,76 +395,122 @@ function AreaScanner.check_scan_signal_collision(count, result, signal)
 end
 
 -- Count the entitys in charted area
-function AreaScanner.scan_area(surface, scan_area, scanner_force, forces, scan_settings)
+function AreaScanner.scan_area(surface, areas, scanner_force, forces, counters_settings)
   local resources = {}
   local environment = {}
   local buildings = {}
   local ghosts = {}
   local items_on_ground = {}
   local counters = {}
-  for name, _ in pairs(scan_settings) do counters[name] = 0 end
-  local areas = {}
-  areas, counters.uncharted = RB_util.find_charted_areas(scanner_force, surface, scan_area)
-  local blacklist = {}
-  for _, area in pairs(areas) do
-    local result = surface.find_entities_filtered{area = area, force = forces}
+  for name, _ in pairs(counters_settings) do counters[name] = 0 end
+  if #forces > 0 then
+    local blacklist = {}
+    for _, area in pairs(areas) do
+      local result = {}
+      result = surface.find_entities_filtered{area = area, force = forces}
+      for _, entity in pairs(result) do
+        local e_type = entity.type
+        local e_name = entity.name
+        local e_pos  = entity.position
+        local hash = e_name .. "_" .. e_pos.x .. "_" .. e_pos.y
+        if blacklist[hash] then
+          -- We already counted this
+        elseif e_type == "resource" then
+          local amount = entity.amount
+          if entity.prototype.infinite_resource then amount = 1 end
+          resources[e_name] = (resources[e_name] or 0) + amount
+          counters.resources = counters.resources + 1
+
+        elseif e_type == "tree" or e_type == "fish"
+        or (e_type == "simple-entity" and entity.prototype.count_as_rock_for_filtered_deconstruction) then
+          -- Trees, fish, rocks
+          environment[e_name] = (environment[e_name] or 0) + 1
+          counters.trees_and_rocks = counters.trees_and_rocks + 1
+
+        elseif e_type == "cliff" then
+          counters.cliffs = counters.cliffs + 1
+
+        elseif e_type == "item-entity" then
+          local stack = entity.stack
+          items_on_ground[stack.name] = (items_on_ground[stack.name] or 0) + stack.count
+          counters.items_on_ground = counters.items_on_ground + stack.count
+
+        elseif entity.force == scanner_force then
+          -- ghosts and buildings (scanner's force)
+          if e_name == "entity-ghost" then
+            local ghost_name = entity.ghost_name
+            ghosts[ghost_name] = (ghosts[ghost_name] or 0) + 1
+            counters.ghosts = counters.ghosts + 1
+          else
+            if not entity.has_flag("hidden") then
+              buildings[e_name] = (buildings[e_name] or 0) + 1
+              counters.buildings = counters.buildings + 1
+              if entity.to_be_deconstructed() then
+                counters.to_be_deconstructed = counters.to_be_deconstructed + 1
+              end
+            end
+          end
+
+        elseif AreaScanner.MILITARY_STRUCTURES[e_type] then
+          -- Enemy base
+          counters.targets = counters.targets + 1
+
+        end
+        -- Mark as counted
+        blacklist[hash] = true
+      end
+    end
+  end
+  return {resources = resources, environment = environment, buildings = buildings, ghosts = ghosts, items_on_ground = items_on_ground, counters = counters}
+end
+
+function AreaScanner.scan_area_no_hash(surface, area, scanner_force, forces, counters_settings)
+  -- Almost a complete copy of "AreaScanner.scan_area()"
+  local resources = {}
+  local environment = {}
+  local buildings = {}
+  local ghosts = {}
+  local items_on_ground = {}
+  local counters = {}
+  for name, _ in pairs(counters_settings) do counters[name] = 0 end
+  if #forces > 0 then
+    local result = {}
+    result = surface.find_entities_filtered{area = area, force = forces}
     for _, entity in pairs(result) do
       local e_type = entity.type
       local e_name = entity.name
-      local e_pos  = entity.position
-      local hash = e_name .. "_" .. e_pos.x .. "_" .. e_pos.y
-      if blacklist[hash] then
-        -- We already counted this
-      elseif e_type == "resource" then
+      if e_type == "resource" then
         local amount = entity.amount
         if entity.prototype.infinite_resource then amount = 1 end
         resources[e_name] = (resources[e_name] or 0) + amount
         counters.resources = counters.resources + 1
-
       elseif e_type == "tree" or e_type == "fish"
-        or (e_type == "simple-entity" and entity.prototype.count_as_rock_for_filtered_deconstruction) then
-        -- Trees, fish, rocks
+      or (e_type == "simple-entity" and entity.prototype.count_as_rock_for_filtered_deconstruction) then
         environment[e_name] = (environment[e_name] or 0) + 1
         counters.trees_and_rocks = counters.trees_and_rocks + 1
-        -- entity.is_registered_for_deconstruction(scanner_force)
-
       elseif e_type == "cliff" then
         counters.cliffs = counters.cliffs + 1
-        -- entity.is_registered_for_deconstruction(scanner_force)
-
       elseif e_type == "item-entity" then
         local stack = entity.stack
         items_on_ground[stack.name] = (items_on_ground[stack.name] or 0) + stack.count
         counters.items_on_ground = counters.items_on_ground + stack.count
-
       elseif entity.force == scanner_force then
-        -- ghosts and buildings (scanner's force)
-        if entity.name == "entity-ghost" then
-          local ghost_name = entity.ghost_prototype.name
+        if e_name == "entity-ghost" then
+          local ghost_name = entity.ghost_name
           ghosts[ghost_name] = (ghosts[ghost_name] or 0) + 1
           counters.ghosts = counters.ghosts + 1
         else
-          local flags = entity.prototype.flags -- entity.has_flag("hidden")
-          if flags and not flags.hidden then
+          if not entity.has_flag("hidden") then
             buildings[e_name] = (buildings[e_name] or 0) + 1
             counters.buildings = counters.buildings + 1
-            if entity.status and entity.status == defines.entity_status.marked_for_deconstruction then -- replace to entity.to_be_deconstructed() and check
+            if entity.to_be_deconstructed() then
               counters.to_be_deconstructed = counters.to_be_deconstructed + 1
             end
           end
         end
-
       elseif AreaScanner.MILITARY_STRUCTURES[e_type] then
-        -- Enemy base
         counters.targets = counters.targets + 1
-
       end
-      -- Mark as counted
-      blacklist[hash] = true
-    end
-
-    if scan_settings.water.is_shown then
-      counters.water = counters.water + surface.count_tiles_filtered{area = area, collision_mask = "water-tile"}
     end
   end
   return {resources = resources, environment = environment, buildings = buildings, ghosts = ghosts, items_on_ground = items_on_ground, counters = counters}
