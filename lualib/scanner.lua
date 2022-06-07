@@ -63,28 +63,31 @@ AreaScanner.FILTER_MASK_ORDER = {
   {group = "counters", name = "to_be_deconstructed"},
 }
 
-function AreaScanner.on_tick_scanner(network)
-  local scanner = global.scanners[network.deployer.unit_number]
-  if not scanner then return end
+function AreaScanner.on_tick_scanner(scanner)
   if not scanner.network_imput and scanner.previous then return end
   -- Copy values from circuit network to scanner
   local changed = false
   if scanner.previous then
-    changed = AreaScanner.signal_changed(scanner, network, "filter")
-    if changed then AreaScanner.set_filter_mask(scanner.settings, scanner.previous.filter) end
-    changed = AreaScanner.signal_changed(scanner, network, "x") or changed
-    changed = AreaScanner.signal_changed(scanner, network, "y") or changed
-    changed = AreaScanner.signal_changed(scanner, network, "width") or changed
-    changed = AreaScanner.signal_changed(scanner, network, "height") or changed
+    local entity = scanner.entity
+    local previous = scanner.previous
+    local get_signal = entity.get_merged_signal
+    for name, param in pairs(scanner.settings.scan_area) do
+      local value = param
+      if type(param) == "table" then value = get_signal(param) end
+      value = AreaScanner.sanitize_area(name, value)
+      if value ~= previous[name] then
+        previous[name] = value
+        if name == "filter" then AreaScanner.set_filter_mask(scanner.settings, value) end
+        changed = true
+      end
+    end
   else
     changed = true
     AreaScanner.make_previous(scanner)
   end
   if changed then
     -- Scan the new area
-    if __Profiler then remote.call("profiler", "dump") end
     AreaScanner.scan_resources(scanner)
-    if __Profiler then remote.call("profiler", "dump") end
     -- Update any open scanner guis
     for _, player in pairs(game.players) do
       if player.opened
@@ -97,18 +100,6 @@ function AreaScanner.on_tick_scanner(network)
   end
 end
 
--- Copy the signal value from the circuit network or settings.
--- Return true if changed, false if not changed.
-function AreaScanner.signal_changed(scanner, network, name)
-  local value = AreaScanner.get_number_or_signal_value(scanner.settings.scan_area[name], network)
-  value = AreaScanner.sanitize_area(name, value)
-  if value ~= scanner.previous[name] then
-    scanner.previous[name] = value
-    return true
-  end
-  return false
-end
-
 function AreaScanner.on_built_scanner(entity, event)
   local tags = event.tags
   if event.source and event.source.valid then
@@ -118,7 +109,6 @@ function AreaScanner.on_built_scanner(entity, event)
   end
   local scanner = AreaScanner.deserialize(entity, tags)
   script.register_on_entity_destroyed(entity)
-  AreaScanner.update_scanner_network(scanner)
   AreaScanner.make_previous(scanner)
   AreaScanner.scan_resources(scanner)
 end
@@ -151,10 +141,13 @@ function AreaScanner.deserialize(entity, tags)
     scanner.settings = util.table.deepcopy(AreaScanner.DEFAULT_SCANNER_SETTINGS)
   end
   if tags and not tags.settings then
-    scanner.settings.scan_area.x = tags.x_signal or tags.x or 0
-    scanner.settings.scan_area.y = tags.y_signal or tags.y  or 0
-    scanner.settings.scan_area.width = tags.width_signal or tags.width or 64
-    scanner.settings.scan_area.height = tags.height_signal or tags.height or 64
+    scanner.settings.scan_area = {
+      x = tags.x_signal or tags.x or 0,
+      y = tags.y_signal or tags.y or 0,
+      width = tags.width_signal or tags.width or 64,
+      height = tags.height_signal or tags.height or 64,
+      filter = 966
+    }
   end
   AreaScanner.mark_unknown_signals(scanner.settings)
   AreaScanner.check_input_signals(scanner)
@@ -176,29 +169,32 @@ end
 function AreaScanner.make_previous(scanner)
   if not scanner then return end
   AreaScanner.check_input_signals(scanner)
+  local a = scanner.settings.scan_area
   if not scanner.network_imput then
-    scanner.previous = {}
-    scanner.previous.x = scanner.settings.scan_area.x
-    scanner.previous.y = scanner.settings.scan_area.y
-    scanner.previous.width = scanner.settings.scan_area.width
-    scanner.previous.height = scanner.settings.scan_area.height
-    scanner.previous.filter = AreaScanner.get_filter_mask(scanner.settings)
-    scanner.settings.scan_area.filter = scanner.previous.filter
+    --All inputs are constants.
+    local f = AreaScanner.get_filter_mask(scanner.settings) -- the settings are in prioroty for the filter.
+    scanner.previous = {x = a.x, y = a.y, width = a.width, height = a.height, filter = f}
+    a.filter = f
   else
-    local network = global.scanners[scanner.entity.unit_number]
-    if not network then return end
-    scanner.previous = {}
-    scanner.previous.x = AreaScanner.get_number_or_signal_value(scanner.settings.scan_area.x, network)
-    scanner.previous.y = AreaScanner.get_number_or_signal_value(scanner.settings.scan_area.y, network)
-    scanner.previous.width = AreaScanner.get_number_or_signal_value(scanner.settings.scan_area.width, network)
-    scanner.previous.height = AreaScanner.get_number_or_signal_value(scanner.settings.scan_area.height, network)
-    if type(scanner.settings.scan_area.filter) == "number" then
-      scanner.previous.filter = AreaScanner.get_filter_mask(scanner.settings)
-      scanner.settings.scan_area.filter = scanner.previous.filter
-    else
-      scanner.previous.filter = get_signal(network, scanner.settings.scan_area.filter)
-      AreaScanner.set_filter_mask(scanner.settings, scanner.previous.filter)
+    local entity = scanner.entity
+    local previous = {x = 0, y = 0, width = 0, height = 0, filter = 0}
+    local get_signal = entity.get_merged_signal
+    for name, param in pairs(a) do
+      local value = param
+      if type(param) == "table" then value = get_signal(param) end
+      value = AreaScanner.sanitize_area(name, value)
+      if name == "filter" then
+        if type(param) == "table" then
+          AreaScanner.set_filter_mask(scanner.settings, value)
+        else
+          --ignore constant number for the filter, the settings are in prioroty.
+          value = AreaScanner.get_filter_mask(scanner.settings)
+          a.filter = value
+        end
+      end
+      previous[name] = value
     end
+    scanner.previous = previous
   end
 end
 
@@ -206,7 +202,6 @@ function AreaScanner.on_destroyed_scanner(unit_number)
   local scanner = global.scanners[unit_number]
   if scanner then
     global.scanners[unit_number] = nil
-    global.networks[unit_number] = nil
     for _, player in pairs(game.players) do
       -- Remove scanner gui
       if player.opened
@@ -216,15 +211,6 @@ function AreaScanner.on_destroyed_scanner(unit_number)
         AreaScannerGUI.destroy_gui(player.opened)
       end
     end
-  end
-end
-
--- Cache the circuit networks attached to this scanner
-function AreaScanner.update_scanner_network(scanner)
-  if scanner.network_imput then
-    update_network(scanner.entity)
-  else
-    global.networks[scanner.entity.unit_number] = nil
   end
 end
 
@@ -520,11 +506,12 @@ end
 -- Limit width/height to 999 for better performance.
 function AreaScanner.sanitize_area(key, value)
   if key == "filter" then return value end
-  if value > 2000000 then value = 2000000 end
-  if value < -2000000 then value = -2000000 end
   if key == "width" or key == "height" then
     if value < 0 then value = 0 end
     if value > 999 then value = 999 end
+  else
+    if value > 2000000 then value = 2000000 end
+    if value < -2000000 then value = -2000000 end
   end
   return value
 end
@@ -568,12 +555,6 @@ function AreaScanner.set_filter_mask(settings, mask)
       settings.counters[filter.name].is_shown = (band(mask, pow(2, i)) ~= 0)
     end
   end
-end
-
-function AreaScanner.get_number_or_signal_value(n, network)
-  if not n then return nil end
-  if type(n) == "number" then return n end
-  return get_signal(network, n)
 end
 
 return AreaScanner

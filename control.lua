@@ -10,7 +10,6 @@ AreaScanner = require "lualib.scanner"
 local function on_init()
   global.deployers = {}
   global.fuel_requests = {}
-  global.networks = {}
   global.scanners = {}
   global.blueprints = {}
   GUI_util.cache_signals()
@@ -19,45 +18,11 @@ local function on_init()
 end
 
 local function on_mods_changed(event)
-  --global.deployer_index = nil
-  --if not global.networks then global.networks = {} end
   global.blueprints = {}
 
   -- Check deleted signals in the default scanner settings.
   GUI_util.cache_signals()
   AreaScanner.mark_unknown_signals(AreaScanner.DEFAULT_SCANNER_SETTINGS)
-
-  --[[
-    The old migration code doesn't make sense because the name of the mod has changed.
-    All global data remained in the other execution environment.
-  -- Migrations
-  if event
-  and event.mod_changes
-  and event.mod_changes["recursive-blueprints"]
-  and event.mod_changes["recursive-blueprints"].old_version then
-    -- Migrate fuel requests
-    if event.mod_changes["recursive-blueprints"].old_version < "1.1.5" then
-      local new_fuel_requests = {}
-      for _, request in pairs(global.fuel_requests or {}) do
-        if request.proxy and request.proxy.valid then
-          new_fuel_requests[request.proxy.unit_number] = request.entity
-        end
-      end
-      global.fuel_requests = new_fuel_requests
-    end
-    -- Migrate deployer index
-    if event.mod_changes["recursive-blueprints"].old_version < "1.1.8" then
-      global.net_cache = nil
-      local new_deployers = {}
-      for _, deployer in pairs(global.deployers or {}) do
-        if deployer.valid then
-          new_deployers[deployer.unit_number] = deployer
-        end
-      end
-      global.deployers = new_deployers
-    end
-  end
-  ]]
 
   --Migrate deployers and scanners to new mod name
   if (event and event.mod_changes) and
@@ -67,9 +32,7 @@ local function on_mods_changed(event)
       for _, entity in pairs(surface.find_entities_filtered({name = {"blueprint-deployer", "recursive-blueprints-scanner"}})) do
         if entity.name == "blueprint-deployer" then
           global.deployers[entity.unit_number] = entity
-          update_network(entity)
         elseif entity.name == "recursive-blueprints-scanner" then
-          global.deployers[entity.unit_number] = entity
           AreaScanner.on_built_scanner(entity, {})
         end
       end
@@ -125,33 +88,11 @@ local function on_setting_changed(event)
 end
 
 local function on_tick()
-  -- Check one deployer per tick for new circuit network connections
-  local index = global.deployer_index
-  global.deployer_index = next(global.deployers, global.deployer_index)
-  if global.deployers[index] then
-    if global.deployers[index].valid then
-      update_network(global.deployers[index])
-    else
-      global.deployers[index] = nil
-      global.networks[index] = nil
-    end
+  for _, deployer in pairs(global.deployers) do
+    on_tick_deployer(deployer)
   end
-
-  -- Read all circuit networks
-  for _, network in pairs(global.networks) do
-    if network.deployer.valid then
-      if network.red and not network.red.valid then
-        network.red = nil
-      end
-      if network.green and not network.green.valid then
-        network.green = nil
-      end
-      if network.deployer.name == "recursive-blueprints-scanner" then
-        AreaScanner.on_tick_scanner(network)
-      else
-        on_tick_deployer(network)
-      end
-    end
+  for _, scanner in pairs(global.scanners) do
+    AreaScanner.on_tick_scanner(scanner)
   end
 end
 
@@ -165,29 +106,10 @@ local function on_built(event)
     return
   end
 
-  -- If entity is a blueprint deployer, cache circuit network connections
   if entity.name == "blueprint-deployer" then
     global.deployers[entity.unit_number] = entity
-    update_network(entity)
-    return
-  end
-
-  -- Turn on resource scanner
-  if entity.name == "recursive-blueprints-scanner" then
-    global.deployers[entity.unit_number] = entity
+  elseif entity.name == "recursive-blueprints-scanner" then
     AreaScanner.on_built_scanner(entity, event)
-    return
-  end
-
-  -- If neighbor is a blueprint deployer, update circuit network connections
-  local connections = entity.circuit_connection_definitions
-  if connections then
-    for _, connection in pairs(connections) do
-      if connection.target_entity.valid
-      and connection.target_entity.name == "blueprint-deployer" then
-        update_network(connection.target_entity)
-      end
-    end
   end
 end
 

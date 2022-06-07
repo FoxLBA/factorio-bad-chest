@@ -13,7 +13,6 @@ function AreaScannerGUI.create_scanner_gui(player, entity)
   local scanner = global.scanners[entity.unit_number]
   if not scanner then
     player.force.print('AreaScannerGUI.create_scanner_gui scanner data not found. Generating default settings.')
-    global.deployers[entity.unit_number] = entity
     AreaScanner.on_built_scanner(entity, {})
     scanner = global.scanners[entity.unit_number]
   end
@@ -411,7 +410,6 @@ function AreaScannerGUI.set_scanner_value(element)
   value = AreaScanner.sanitize_area(key, value)
   scanner.settings.scan_area[key] = value
   AreaScanner.check_input_signals(scanner)
-  AreaScanner.update_scanner_network(scanner)
 
   -- Run a scan if the area has changed
   if scanner.previous[key] ~= value then
@@ -444,7 +442,6 @@ function AreaScannerGUI.set_scanner_signal(element)
   if key_type == "input" then
     scanner.settings.scan_area[key] = element.tags["recursive-blueprints-signal"]
     scanner.network_imput = true
-    AreaScanner.update_scanner_network(scanner)
   else
     scanner.settings.counters[key].signal = element.tags["recursive-blueprints-signal"]
     AreaScanner.scan_resources(scanner)

@@ -15,13 +15,13 @@ for i = 1, 5 do
     )
 end
 
-function deploy_blueprint(bp, network)
+function deploy_blueprint(bp, deployer)
   if not bp then return end
   if not bp.valid_for_read then return end
   if not bp.is_blueprint_setup() then return end
 
   -- Rotate
-  local rotation = get_signal(network, ROTATE_SIGNAL)
+  local rotation = deployer.get_merged_signal(ROTATE_SIGNAL)
   local direction = defines.direction.north
   if (rotation == 1) then
     direction = defines.direction.east
@@ -31,13 +31,13 @@ function deploy_blueprint(bp, network)
     direction = defines.direction.west
   end
 
-  local position = get_target_position(network)
+  local position = get_target_position(deployer)
   if not position then return end
 
   -- Build blueprint
   local result = bp.build_blueprint{
-    surface = network.deployer.surface,
-    force = network.deployer.force,
+    surface = deployer.surface,
+    force = deployer.force,
     position = position,
     direction = direction,
     force_build = true,
@@ -50,17 +50,17 @@ function deploy_blueprint(bp, network)
       stack = bp,
     })
   end
-  deployer_logging("point_deploy", network,
-                   {bp = bp, position = position, direction = direction}
+  deployer_logging("point_deploy", deployer,
+                    {bp = bp, position = position, direction = direction}
                   )
 end
 
-function deconstruct_area(bp, network, deconstruct)
-  local area = get_area(network)
-  local force = network.deployer.force
+function deconstruct_area(bp, deployer, deconstruct)
+  local area = get_area(deployer)
+  local force = deployer.force
   if deconstruct == false then
     -- Cancel area
-    network.deployer.surface.cancel_deconstruct_area{
+    deployer.surface.cancel_deconstruct_area{
       area = area,
       force = force,
       skip_fog_of_war = false,
@@ -68,145 +68,137 @@ function deconstruct_area(bp, network, deconstruct)
     }
   else
     -- Deconstruct area
-    local deconstruct_self = network.deployer.to_be_deconstructed(force)
-    network.deployer.surface.deconstruct_area{
+    local deconstruct_self = deployer.to_be_deconstructed(force)
+    deployer.surface.deconstruct_area{
       area = area,
       force = force,
       skip_fog_of_war = false,
       item = bp,
     }
     if not deconstruct_self then
-       -- Don't deconstruct myself in an area order
-      network.deployer.cancel_deconstruction(force)
+      -- Don't deconstruct myself in an area order
+      deployer.cancel_deconstruction(force)
     end
   end
-  deployer_logging("area_deploy", network,
-                   {sub_type = "deconstract", bp = bp,
+  deployer_logging("area_deploy", deployer,
+                    {sub_type = "deconstract", bp = bp,
                     area = area, apply = deconstruct}
                   )
 end
 
-function upgrade_area(bp, network, upgrade)
-  local area = get_area(network)
+function upgrade_area(bp, deployer, upgrade)
+  local area = get_area(deployer)
   if upgrade == false then
     -- Cancel area
-    network.deployer.surface.cancel_upgrade_area{
+    deployer.surface.cancel_upgrade_area{
       area = area,
-      force = network.deployer.force,
+      force = deployer.force,
       skip_fog_of_war = false,
       item = bp,
     }
   else
     -- Upgrade area
-    network.deployer.surface.upgrade_area{
+    deployer.surface.upgrade_area{
       area = area,
-      force = network.deployer.force,
+      force = deployer.force,
       skip_fog_of_war = false,
       item = bp,
     }
   end
-  deployer_logging("area_deploy", network,
-                   {sub_type = "upgrade", bp = bp,
+  deployer_logging("area_deploy", deployer,
+                    {sub_type = "upgrade", bp = bp,
                     area = area, apply = upgrade}
                   )
 end
 
-function on_tick_deployer(network)
-  if not network.red and not network.green then return end
+function on_tick_deployer(deployer)
   -- Read deploy signal
-  local deploy = get_signal(network, DEPLOY_SIGNAL)
-  local bp = nil
-  if deploy > 0 then
-    bp = network.deployer.get_inventory(defines.inventory.chest)[1]
-    if not bp.valid_for_read then return end
-
-    -- Pick item from blueprint book
-    if bp.is_blueprint_book then
-      local inventory = nil
-      for i=1, 6 do
-        inventory = bp.get_inventory(defines.inventory.item_main)
-        if #inventory < 1 then return end -- Got an empty book, nothing to do
-        deploy = get_signal(network, NESTED_DEPLOY_SIGNALS[i])
-        if (deploy < 1) or (deploy > #inventory) then break end -- Navigation is no longer applicable
-        bp = inventory[deploy]
-        if not bp.valid_for_read then return end -- Got an empty slot
-        if not bp.is_blueprint_book then break end
+  local get_signal = deployer.get_merged_signal
+  local deploy = get_signal(DEPLOY_SIGNAL)
+  if deploy ~= 0 then
+    if deploy > 0 then
+      local bp = deployer.get_inventory(defines.inventory.chest)[1]
+      if not bp.valid_for_read then return end
+      -- Pick item from blueprint book
+      if bp.is_blueprint_book then
+        local inventory = nil
+        for i=1, 6 do
+          inventory = bp.get_inventory(defines.inventory.item_main)
+          if #inventory < 1 then return end -- Got an empty book, nothing to do
+          deploy = get_signal(NESTED_DEPLOY_SIGNALS[i])
+          if (deploy < 1) or (deploy > #inventory) then break end -- Navigation is no longer applicable
+          bp = inventory[deploy]
+          if not bp.valid_for_read then return end -- Got an empty slot
+          if not bp.is_blueprint_book then break end
+        end
+        -- Pick active item from nested blueprint books
+        bp = get_nested_blueprint(bp)
+        if not bp or not bp.valid_for_read then return end
+      end
+      if bp.is_blueprint then deploy_blueprint(bp, deployer)
+      elseif bp.is_deconstruction_item then deconstruct_area(bp, deployer, true)
+      elseif bp.is_upgrade_item then upgrade_area(bp, deployer, true)
       end
 
-      -- Pick active item from nested blueprint books
-      bp = get_nested_blueprint(bp)
-      if not bp or not bp.valid_for_read then return end
-    end
-
-    if bp.is_blueprint then
-      -- Deploy blueprint
-      deploy_blueprint(bp, network)
-    elseif bp.is_deconstruction_item then
-      -- Deconstruct area
-      deconstruct_area(bp, network, true)
-    elseif bp.is_upgrade_item then
-      -- Upgrade area
-      upgrade_area(bp, network, true)
-    end
-    return
-  end
-
-  if deploy == -1 then
-    bp = network.deployer.get_inventory(defines.inventory.chest)[1]
-    if not bp.valid_for_read then return end
-    if bp.is_deconstruction_item then
-      -- Cancel deconstruction in area
-      deconstruct_area(bp, network, false)
-    elseif bp.is_upgrade_item then
-      -- Cancel upgrade in area
-      upgrade_area(bp, network, false)
+    elseif deploy == -1 then
+      local bp = deployer.get_inventory(defines.inventory.chest)[1]
+      if not bp.valid_for_read then return end
+      if bp.is_deconstruction_item then
+        -- Cancel deconstruction in area
+        deconstruct_area(bp, deployer, false)
+      elseif bp.is_upgrade_item then
+        -- Cancel upgrade in area
+        upgrade_area(bp, deployer, false)
+      end
     end
     return
   end
 
   -- Read deconstruct signal
-  local deconstruct = get_signal(network, DECONSTRUCT_SIGNAL)
-  if deconstruct == -1 then
-    -- Deconstruct area
-    deconstruct_area(bp, network, true)
-    return
-  elseif deconstruct == -2 then
-    -- Deconstruct self
-    network.deployer.order_deconstruction(network.deployer.force)
-    deployer_logging("self_deconstract", network, nil)
-    return
-  elseif deconstruct == -3 then
-    -- Cancel deconstruction in area
-    deconstruct_area(bp, network, false)
+  local deconstruct = get_signal(DECONSTRUCT_SIGNAL)
+  if deconstruct ~= 0 then
+    if deconstruct == -1 then
+      -- Deconstruct area
+      deconstruct_area(nil, deployer, true)
+    elseif deconstruct == -2 then
+      -- Deconstruct self
+      deployer.order_deconstruction(deployer.force)
+      deployer_logging("self_deconstract", deployer, nil)
+    elseif deconstruct == -3 then
+      -- Cancel deconstruction in area
+      deconstruct_area(nil, deployer, false)
+    end
     return
   end
 
   -- Read copy signal
-  local copy = get_signal(network, COPY_SIGNAL)
-  if copy == 1 then
-    -- Copy blueprint
-    copy_blueprint(network)
-    return
-  elseif copy == -1 then
-    -- Delete blueprint
-    local stack = network.deployer.get_inventory(defines.inventory.chest)[1]
-    if not stack.valid_for_read then return end
-    if stack.is_blueprint
-    or stack.is_blueprint_book
-    or stack.is_upgrade_item
-    or stack.is_deconstruction_item then
-      stack.clear()
-      deployer_logging("destroy_book", network, nil)
+  local copy = get_signal(COPY_SIGNAL)
+  if copy ~= 0 then
+    if copy == 1 then
+      -- Copy blueprint
+      copy_blueprint(deployer)
+    elseif copy == -1 then
+      -- Delete blueprint
+      local stack = deployer.get_inventory(defines.inventory.chest)[1]
+      if not stack.valid_for_read then return end
+      if stack.is_blueprint
+      or stack.is_blueprint_book
+      or stack.is_upgrade_item
+      or stack.is_deconstruction_item then
+        stack.clear()
+        deployer_logging("destroy_book", deployer, nil)
+      end
     end
     return
   end
 end
 
-function get_area(network)
-  local X = get_signal(network, X_SIGNAL)
-  local Y = get_signal(network, Y_SIGNAL)
-  local W = get_signal(network, WIDTH_SIGNAL)
-  local H = get_signal(network, HEIGHT_SIGNAL)
+function get_area(deployer)
+  local get_signal = deployer.get_merged_signal
+  local X = get_signal(X_SIGNAL)
+  local Y = get_signal(Y_SIGNAL)
+  local W = get_signal(WIDTH_SIGNAL)
+  local H = get_signal(HEIGHT_SIGNAL)
 
   if W < 1 then W = 1 end
   if H < 1 then H = 1 end
@@ -226,22 +218,25 @@ function get_area(network)
   W = W - 0.0078125
   H = H - 0.0078125
 
-  local position = network.deployer.position
+  local position = deployer.position
   return {
     {position.x + X - W/2, position.y + Y - H/2},
-    {position.x + X + W/2, position.y + Y + H/2},
+    {position.x + X + W/2, position.y + Y + H/2}
   }
 end
 
-function get_area_signals(network)
-  return get_signal(network, WIDTH_SIGNAL), get_signal(network, HEIGHT_SIGNAL)
+function get_area_signals(deployer)
+  local get_signal = deployer.get_merged_signal
+  return get_signal(WIDTH_SIGNAL), get_signal(HEIGHT_SIGNAL)
 end
 
-function get_target_position(network)
+function get_target_position(deployer)
   -- Shift x,y coordinates
+  local d_pos = deployer.position
+  local get_signal = deployer.get_merged_signal
   local position = {
-    x = network.deployer.position.x + get_signal(network, X_SIGNAL),
-    y = network.deployer.position.y + get_signal(network, Y_SIGNAL),
+    x = d_pos.x + get_signal(X_SIGNAL),
+    y = d_pos.y + get_signal(Y_SIGNAL),
   }
 
   -- Check for building out of bounds
@@ -254,21 +249,26 @@ function get_target_position(network)
   return position
 end
 
-function copy_blueprint(network)
-  local inventory = network.deployer.get_inventory(defines.inventory.chest)
+function copy_blueprint(deployer)
+  local inventory = deployer.get_inventory(defines.inventory.chest)
   if not inventory.is_empty() then return end
   for _, signal in pairs(global.blueprint_signals) do
     -- Check for a signal before doing an expensive search
-    if get_signal(network, signal) >= 1 then
+    if deployer.get_merged_signal(signal) >= 1 then
       -- Signal exists, now we have to search for the blueprint
-      local stack = find_stack_in_network(network.deployer, signal.name)
+      local stack = find_stack_in_network(deployer, signal.name)
       if stack then
         inventory[1].set_stack(stack)
-        deployer_logging("copy_book", network, stack)
+        deployer_logging("copy_book", deployer, stack)
         return
       end
     end
   end
+end
+
+-- Create a unique key for a circuit connector
+local function con_hash(entity, connector, wire)
+  return entity.unit_number .. "-" .. connector .. "-" .. wire
 end
 
 -- Breadth-first search for an item in the circuit network
@@ -321,20 +321,22 @@ function find_stack_in_network(deployer, item_name)
 end
 
 function find_stack_in_container(entity, item_name)
-  if entity.type == "container" or entity.type == "logistic-container" then
+  local e_type = entity.type
+  if e_type == "container" or e_type == "logistic-container" then
     local inventory = entity.get_inventory(defines.inventory.chest)
     for i = 1, #inventory do
       if inventory[i].valid_for_read and inventory[i].name == item_name then
         return inventory[i]
       end
     end
-  elseif entity.type == "inserter" then
+  elseif e_type == "inserter" then
     local behavior = entity.get_control_behavior()
+    e_held_stack = entity.held_stack
     if behavior
     and behavior.circuit_read_hand_contents
-    and entity.held_stack.valid_for_read
-    and entity.held_stack.name == item_name then
-      return entity.held_stack
+    and e_held_stack.valid_for_read
+    and e_held_stack.name == item_name then
+      return e_held_stack
     end
   end
 end
