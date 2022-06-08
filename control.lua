@@ -1,6 +1,5 @@
 require "util"
 require "lualib.logging"
-require "lualib.common"
 require "lualib.deployer"
 RB_util = require "lualib.rb-util"
 GUI_util = require "lualib.gui-util"
@@ -19,6 +18,7 @@ end
 
 local function on_mods_changed(event)
   global.blueprints = {}
+  if not global.scanners then global.scanners = {} end
 
   -- Check deleted signals in the default scanner settings.
   GUI_util.cache_signals()
@@ -43,16 +43,13 @@ local function on_mods_changed(event)
   if (event and event.mod_changes)
   and (event.mod_changes["rec-blue-plus"]
   and event.mod_changes["rec-blue-plus"].old_version
-  and event.mod_changes["rec-blue-plus"].old_version < "1.3.1") then
+  and event.mod_changes["rec-blue-plus"].old_version < "1.3.5") then
     for _, scanner in pairs(global.scanners or {}) do
-      if not scanner.settings then
         AreaScanner.on_built_scanner(scanner.entity, {tags = scanner})
-      end
     end
   end
 
   -- Delete signals from uninstalled mods
-  if not global.scanners then global.scanners = {} end
   for _, scanner in pairs(global.scanners) do
     AreaScanner.mark_unknown_signals(scanner.settings)
   end

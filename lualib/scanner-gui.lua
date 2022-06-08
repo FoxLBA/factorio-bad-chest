@@ -414,6 +414,7 @@ function AreaScannerGUI.set_scanner_value(element)
   -- Run a scan if the area has changed
   if scanner.previous[key] ~= value then
     scanner.previous[key] = value
+    scanner.current[key] = value
     if key == "filter" then
       AreaScanner.set_filter_mask(scanner.settings, value)
     end

@@ -1,6 +1,6 @@
 ---------------------------------------------------------------------------------------------------
 Version: 1.3.5
-Date: ????
+Date: 2022-06-08
   Changes:
     - Raw resources counter now count number of spots instead of the sum of the resources received.
     - Scanner optimization.

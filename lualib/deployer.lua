@@ -112,6 +112,7 @@ function upgrade_area(bp, deployer, upgrade)
 end
 
 function on_tick_deployer(deployer)
+  if not deployer.valid then return end
   -- Read deploy signal
   local get_signal = deployer.get_merged_signal
   local deploy = get_signal(DEPLOY_SIGNAL)

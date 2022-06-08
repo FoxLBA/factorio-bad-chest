@@ -68,15 +68,15 @@ function AreaScanner.on_tick_scanner(scanner)
   -- Copy values from circuit network to scanner
   local changed = false
   if scanner.previous then
-    local entity = scanner.entity
     local previous = scanner.previous
-    local get_signal = entity.get_merged_signal
+    local current  = scanner.current
+    local get_signal = scanner.entity.get_merged_signal
     for name, param in pairs(scanner.settings.scan_area) do
       local value = param
       if type(param) == "table" then value = get_signal(param) end
-      value = AreaScanner.sanitize_area(name, value)
       if value ~= previous[name] then
         previous[name] = value
+        current[name]  = AreaScanner.sanitize_area(name, value)
         if name == "filter" then AreaScanner.set_filter_mask(scanner.settings, value) end
         changed = true
       end
@@ -174,15 +174,16 @@ function AreaScanner.make_previous(scanner)
     --All inputs are constants.
     local f = AreaScanner.get_filter_mask(scanner.settings) -- the settings are in prioroty for the filter.
     scanner.previous = {x = a.x, y = a.y, width = a.width, height = a.height, filter = f}
+    scanner.current  = {x = a.x, y = a.y, width = a.width, height = a.height, filter = f}
     a.filter = f
   else
     local entity = scanner.entity
     local previous = {x = 0, y = 0, width = 0, height = 0, filter = 0}
+    local current  = {x = 0, y = 0, width = 0, height = 0, filter = 0}
     local get_signal = entity.get_merged_signal
     for name, param in pairs(a) do
       local value = param
       if type(param) == "table" then value = get_signal(param) end
-      value = AreaScanner.sanitize_area(name, value)
       if name == "filter" then
         if type(param) == "table" then
           AreaScanner.set_filter_mask(scanner.settings, value)
@@ -193,8 +194,10 @@ function AreaScanner.make_previous(scanner)
         end
       end
       previous[name] = value
+      current[name] = AreaScanner.sanitize_area(name, value)
     end
     scanner.previous = previous
+    scanner.current = current
   end
 end
 
@@ -215,29 +218,29 @@ function AreaScanner.on_destroyed_scanner(unit_number)
 end
 
 function AreaScanner.count_mineable_entity(source, dest)
+  local counter = 0
   for name, count in pairs(source) do
     local prototype = game.entity_prototypes[name]
-    if prototype.mineable_properties then
-      local m_p = prototype.mineable_properties
-      if m_p.minable and m_p.products then
-        for _, product in pairs(m_p.products) do
-          local amount = product.amount
-          if product.amount_min and product.amount_max then
-            amount = (product.amount_min + product.amount_max) / 2
-            amount = amount * product.probability
-          end
-          dest[product.type][product.name] = (dest[product.type][product.name] or 0) + (amount or 0) * count
+    local m_p = prototype.mineable_properties
+    if m_p and m_p.minable and m_p.products then
+      counter = counter + count
+      for _, product in pairs(m_p.products) do
+        local amount = product.amount
+        if product.amount_min and product.amount_max then
+          amount = (product.amount_min + product.amount_max) / 2
+          amount = amount * product.probability
         end
+        dest[product.type][product.name] = (dest[product.type][product.name] or 0) + (amount or 0) * count
       end
     end
   end
+  return counter
 end
 
 ---Scan the area for entitys
 function AreaScanner.scan_resources(scanner)
   if not scanner then return end
   if not scanner.entity.valid then return end
-  if not scanner.previous then return end
 
   local scanner_settings = scanner.settings
   local filters = scanner_settings.filters
@@ -273,32 +276,34 @@ function AreaScanner.scan_resources(scanner)
   end
 
   local surface = scanner.entity.surface
-  local scan_area_settings = scanner.previous
+  local scan_area_settings = scanner.current
   local x = scan_area_settings.x
   local y = scan_area_settings.y
+  local w = scan_area_settings.width
+  local h = scan_area_settings.height
   local p = scanner.entity.position
   local scan_area
   if settings.global["recursive-blueprints-area"].value == "corner" then
     scan_area = {
       {p.x + x, p.y + y},
-      {p.x + x + scan_area_settings.width, p.y + y + scan_area_settings.height}
+      {p.x + x + w, p.y + y + h}
     }
   else
     -- Align to grid
-    if scan_area_settings.width % 2 ~= 0 then x = x + 0.5 end
-    if scan_area_settings.height % 2 ~= 0 then y = y + 0.5 end
+    if w % 2 ~= 0 then x = x + 0.5 end
+    if h % 2 ~= 0 then y = y + 0.5 end
     scan_area = {
-      {p.x + x - scan_area_settings.width/2, p.y + y - scan_area_settings.height/2},
-      {p.x + x + scan_area_settings.width/2, p.y + y + scan_area_settings.height/2}
+      {p.x + x - w/2, p.y + y - h/2},
+      {p.x + x + w/2, p.y + y + h/2}
     }
   end
 
   local areas, uncharted = RB_util.find_charted_areas(force, surface, scan_area)
   local scans
   if #areas == 1 then --Both scanning functions must be consistent!
-    scans = AreaScanner.scan_area_no_hash(surface, areas[1], force, forces, counters)
+    scans = AreaScanner.scan_area_no_hash(surface, areas[1], force, forces)
   else
-    scans = AreaScanner.scan_area(surface, areas, force, forces, counters)
+    scans = AreaScanner.scan_area(surface, areas, force, forces)
   end
   scans.counters.uncharted = uncharted
   if counters.water.is_shown then
@@ -312,10 +317,10 @@ function AreaScanner.scan_resources(scanner)
   local result1 = {item = {}, fluid = {}, virtual = {}}
   local result2 = {item = {}, fluid = {}, virtual = {}}
   if filters.show_resources then AreaScanner.count_mineable_entity(scans.resources, result1) end
-  if filters.show_environment then AreaScanner.count_mineable_entity(scans.environment, result1) end
+  if filters.show_environment then scans.counters.trees_and_rocks = AreaScanner.count_mineable_entity(scans.environment, result1) end
   if filters.show_items_on_ground then result2.item = scans.items_on_ground end
-  if filters.show_buildings then AreaScanner.count_mineable_entity(scans.buildings, result2) end
-  if filters.show_ghosts then AreaScanner.count_mineable_entity(scans.ghosts, result2) end
+  if filters.show_buildings then scans.counters.buildings = AreaScanner.count_mineable_entity(scans.buildings, result2) end
+  if filters.show_ghosts then scans.counters.ghosts = AreaScanner.count_mineable_entity(scans.ghosts, result2) end
 
   -- Copy resources to combinator output
   local behavior = scanner.entity.get_control_behavior()
@@ -381,14 +386,13 @@ function AreaScanner.check_scan_signal_collision(count, result, signal)
 end
 
 -- Count the entitys in charted area
-function AreaScanner.scan_area(surface, areas, scanner_force, forces, counters_settings)
+function AreaScanner.scan_area(surface, areas, scanner_force, forces)
   local resources = {}
   local environment = {}
   local buildings = {}
   local ghosts = {}
   local items_on_ground = {}
-  local counters = {}
-  for name, _ in pairs(counters_settings) do counters[name] = 0 end
+  local counters = {resources = 0, cliffs = 0, items_on_ground = 0, to_be_deconstructed = 0, targets = 0}
   if #forces > 0 then
     local blacklist = {}
     for _, area in pairs(areas) do
@@ -411,7 +415,6 @@ function AreaScanner.scan_area(surface, areas, scanner_force, forces, counters_s
         or (e_type == "simple-entity" and entity.prototype.count_as_rock_for_filtered_deconstruction) then
           -- Trees, fish, rocks
           environment[e_name] = (environment[e_name] or 0) + 1
-          counters.trees_and_rocks = counters.trees_and_rocks + 1
 
         elseif e_type == "cliff" then
           counters.cliffs = counters.cliffs + 1
@@ -426,11 +429,9 @@ function AreaScanner.scan_area(surface, areas, scanner_force, forces, counters_s
           if e_name == "entity-ghost" then
             local ghost_name = entity.ghost_name
             ghosts[ghost_name] = (ghosts[ghost_name] or 0) + 1
-            counters.ghosts = counters.ghosts + 1
           else
             if not entity.has_flag("hidden") then
               buildings[e_name] = (buildings[e_name] or 0) + 1
-              counters.buildings = counters.buildings + 1
               if entity.to_be_deconstructed() then
                 counters.to_be_deconstructed = counters.to_be_deconstructed + 1
               end
@@ -450,15 +451,14 @@ function AreaScanner.scan_area(surface, areas, scanner_force, forces, counters_s
   return {resources = resources, environment = environment, buildings = buildings, ghosts = ghosts, items_on_ground = items_on_ground, counters = counters}
 end
 
-function AreaScanner.scan_area_no_hash(surface, area, scanner_force, forces, counters_settings)
-  -- Almost a complete copy of "AreaScanner.scan_area()"
+-- Almost a complete copy of "AreaScanner.scan_area()"
+function AreaScanner.scan_area_no_hash(surface, area, scanner_force, forces)
   local resources = {}
   local environment = {}
   local buildings = {}
   local ghosts = {}
   local items_on_ground = {}
-  local counters = {}
-  for name, _ in pairs(counters_settings) do counters[name] = 0 end
+  local counters = {resources = 0, cliffs = 0, items_on_ground = 0, to_be_deconstructed = 0, targets = 0}
   if #forces > 0 then
     local result = {}
     result = surface.find_entities_filtered{area = area, force = forces}
@@ -473,7 +473,6 @@ function AreaScanner.scan_area_no_hash(surface, area, scanner_force, forces, cou
       elseif e_type == "tree" or e_type == "fish"
       or (e_type == "simple-entity" and entity.prototype.count_as_rock_for_filtered_deconstruction) then
         environment[e_name] = (environment[e_name] or 0) + 1
-        counters.trees_and_rocks = counters.trees_and_rocks + 1
       elseif e_type == "cliff" then
         counters.cliffs = counters.cliffs + 1
       elseif e_type == "item-entity" then
@@ -484,11 +483,9 @@ function AreaScanner.scan_area_no_hash(surface, area, scanner_force, forces, cou
         if e_name == "entity-ghost" then
           local ghost_name = entity.ghost_name
           ghosts[ghost_name] = (ghosts[ghost_name] or 0) + 1
-          counters.ghosts = counters.ghosts + 1
         else
           if not entity.has_flag("hidden") then
             buildings[e_name] = (buildings[e_name] or 0) + 1
-            counters.buildings = counters.buildings + 1
             if entity.to_be_deconstructed() then
               counters.to_be_deconstructed = counters.to_be_deconstructed + 1
             end
@@ -505,11 +502,10 @@ end
 -- Out of bounds check.
 -- Limit width/height to 999 for better performance.
 function AreaScanner.sanitize_area(key, value)
-  if key == "filter" then return value end
   if key == "width" or key == "height" then
     if value < 0 then value = 0 end
     if value > 999 then value = 999 end
-  else
+  elseif key ~= "filter" then
     if value > 2000000 then value = 2000000 end
     if value < -2000000 then value = -2000000 end
   end
