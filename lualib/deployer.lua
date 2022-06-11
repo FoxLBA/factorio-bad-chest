@@ -18,8 +18,6 @@ for i = 1, 5 do
 end
 
 function Deployer.deploy_blueprint(bp, deployer)
-  if not bp then return end
-  if not bp.valid_for_read then return end
   if not bp.is_blueprint_setup() then return end
 
   -- Rotate
@@ -60,7 +58,7 @@ end
 function Deployer.deconstruct_area(bp, deployer, deconstruct)
   local area = Deployer.get_area(deployer)
   local force = deployer.force
-  if deconstruct == false then
+  if not deconstruct then
     -- Cancel area
     deployer.surface.cancel_deconstruct_area{
       area = area,
@@ -90,7 +88,7 @@ end
 
 function Deployer.upgrade_area(bp, deployer, upgrade)
   local area = Deployer.get_area(deployer)
-  if upgrade == false then
+  if not upgrade then
     -- Cancel area
     deployer.surface.cancel_upgrade_area{
       area = area,
@@ -113,53 +111,48 @@ function Deployer.upgrade_area(bp, deployer, upgrade)
                   )
 end
 
+function Deployer.signal_filtred_deconstruction(deployer, deconstruct, whitelist)
+end
+
 function Deployer.on_tick_deployer(deployer)
   if not deployer.valid then return end
   -- Read deploy signal
   local get_signal = deployer.get_merged_signal
   local deploy = get_signal(DEPLOY_SIGNAL)
   if deploy ~= 0 then
-    if deploy > 0 then
-      local bp = deployer.get_inventory(defines.inventory.chest)[1]
-      if not bp.valid_for_read then return end
-      -- Pick item from blueprint book
-      if bp.is_blueprint_book then
-        local inventory = nil
-        for i=1, 6 do
-          inventory = bp.get_inventory(defines.inventory.item_main)
-          if #inventory < 1 then return end -- Got an empty book, nothing to do
-          deploy = get_signal(NESTED_DEPLOY_SIGNALS[i])
-          if (deploy < 1) or (deploy > #inventory) then break end -- Navigation is no longer applicable
-          bp = inventory[deploy]
-          if not bp.valid_for_read then return end -- Got an empty slot
-          if not bp.is_blueprint_book then break end
-        end
-        -- Pick active item from nested blueprint books
-        bp = Deployer.get_nested_blueprint(bp)
-        if not bp or not bp.valid_for_read then return end
+    local command_direction = deploy > 0
+    if not command_direction then deploy = -deploy end
+    local bp = deployer.get_inventory(defines.inventory.chest)[1]
+    if not bp.valid_for_read then return end
+    -- Pick item from blueprint book
+    if bp.is_blueprint_book then
+      local inventory = nil
+      for i=1, 6 do
+        inventory = bp.get_inventory(defines.inventory.item_main)
+        if #inventory < 1 then return end -- Got an empty book, nothing to do
+        if i ~= 1 then deploy = get_signal(NESTED_DEPLOY_SIGNALS[i]) end
+        if (deploy < 1) or (deploy > #inventory) then break end -- Navigation is no longer applicable
+        bp = inventory[deploy]
+        if not bp.valid_for_read then return end -- Got an empty slot
+        if not bp.is_blueprint_book then break end
       end
-      if bp.is_blueprint then Deployer.deploy_blueprint(bp, deployer)
-      elseif bp.is_deconstruction_item then Deployer.deconstruct_area(bp, deployer, true)
-      elseif bp.is_upgrade_item then Deployer.upgrade_area(bp, deployer, true)
+      -- Pick active item from nested blueprint books if it is still a book.
+      while bp.is_blueprint_book do
+        if not bp.active_index then return end
+        bp = bp.get_inventory(defines.inventory.item_main)[bp.active_index]
+        if not bp.valid_for_read then return end
       end
-
-    elseif deploy == -1 then
-      local bp = deployer.get_inventory(defines.inventory.chest)[1]
-      if not bp.valid_for_read then return end
-      if bp.is_deconstruction_item then
-        -- Cancel deconstruction in area
-        Deployer.deconstruct_area(bp, deployer, false)
-      elseif bp.is_upgrade_item then
-        -- Cancel upgrade in area
-        Deployer.upgrade_area(bp, deployer, false)
-      end
+    end
+    if bp.is_blueprint then Deployer.deploy_blueprint(bp, deployer)
+    elseif bp.is_deconstruction_item then Deployer.deconstruct_area(bp, deployer, command_direction)
+    elseif bp.is_upgrade_item then Deployer.upgrade_area(bp, deployer, command_direction)
     end
     return
   end
 
   -- Read deconstruct signal
   local deconstruct = get_signal(DECONSTRUCT_SIGNAL)
-  if deconstruct ~= 0 then
+  if deconstruct < 0 then
     if deconstruct == -1 then
       -- Deconstruct area
       Deployer.deconstruct_area(nil, deployer, true)
@@ -170,6 +163,16 @@ function Deployer.on_tick_deployer(deployer)
     elseif deconstruct == -3 then
       -- Cancel deconstruction in area
       Deployer.deconstruct_area(nil, deployer, false)
+    elseif deconstruct >= -7 then
+      --[[
+        -4 = Deconstruct area with provided item signals as whitelist
+        -5 = Deconstruct area with provided item signals as blacklist
+        -6 = Cancel area deconstruct with provided item signals as whitelist
+        -7 = Cancel area deconstruct with provided item signals as blacklist
+      ]]
+      local whitelist = (deconstruct == -4) or (deconstruct == -6)
+      local decon = (deconstruct == -4) or (deconstruct == -5)
+      Deployer.signal_filtred_deconstruction(deployer, decon, whitelist)
     end
     return
   end
@@ -357,15 +360,17 @@ end
 
 -- Collect all modded blueprint signals in one table
 function Deployer.cache_blueprint_signals()
-  global.blueprint_signals = {}
-  for _, item in pairs(game.item_prototypes) do
-    if item.type == "blueprint"
-    or item.type == "blueprint-book"
-    or item.type == "upgrade-item"
-    or item.type == "deconstruction-item" then
-      table.insert(global.blueprint_signals, {name=item.name, type="item"})
-    end
+  local blueprint_signals = {}
+  local filter ={
+    {filter = "type", type="blueprint"},
+    {filter = "type", type="blueprint-book"},
+    {filter = "type", type="upgrade-item"},
+    {filter = "type", type="deconstruction-item"}
+  }
+  for _, item in pairs(game.get_filtered_item_prototypes(filter)) do
+    table.insert(blueprint_signals, {name=item.name, type="item"})
   end
+  global.blueprint_signals = blueprint_signals
 end
 
 local LOGGING_SIGNAL = {name="signal-L", type="virtual"}

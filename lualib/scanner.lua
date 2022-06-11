@@ -387,6 +387,8 @@ end
 
 -- Count the entitys in charted area
 function AreaScanner.scan_area(surface, areas, scanner_force, forces)
+  local ROCKS = global.rocks_names
+  local INFINITE_RESOURCES = global.infinite_resources
   local resources = {}
   local environment = {}
   local buildings = {}
@@ -407,12 +409,11 @@ function AreaScanner.scan_area(surface, areas, scanner_force, forces)
           -- We already counted this
         elseif e_type == "resource" then
           local amount = entity.amount
-          if entity.prototype.infinite_resource then amount = 1 end
+          if INFINITE_RESOURCES[e_name] then amount = 1 end
           resources[e_name] = (resources[e_name] or 0) + amount
           counters.resources = counters.resources + 1
 
-        elseif e_type == "tree" or e_type == "fish"
-        or (e_type == "simple-entity" and entity.prototype.count_as_rock_for_filtered_deconstruction) then
+        elseif e_type == "tree" or e_type == "fish" or ROCKS[e_name] then
           -- Trees, fish, rocks
           environment[e_name] = (environment[e_name] or 0) + 1
 
@@ -453,6 +454,8 @@ end
 
 -- Almost a complete copy of "AreaScanner.scan_area()"
 function AreaScanner.scan_area_no_hash(surface, area, scanner_force, forces)
+  local ROCKS = global.rocks_names
+  local INFINITE_RESOURCES = global.infinite_resources
   local resources = {}
   local environment = {}
   local buildings = {}
@@ -467,11 +470,10 @@ function AreaScanner.scan_area_no_hash(surface, area, scanner_force, forces)
       local e_name = entity.name
       if e_type == "resource" then
         local amount = entity.amount
-        if entity.prototype.infinite_resource then amount = 1 end
+        if INFINITE_RESOURCES[e_name] then amount = 1 end
         resources[e_name] = (resources[e_name] or 0) + amount
         counters.resources = counters.resources + 1
-      elseif e_type == "tree" or e_type == "fish"
-      or (e_type == "simple-entity" and entity.prototype.count_as_rock_for_filtered_deconstruction) then
+      elseif e_type == "tree" or e_type == "fish" or ROCKS[e_name] then
         environment[e_name] = (environment[e_name] or 0) + 1
       elseif e_type == "cliff" then
         counters.cliffs = counters.cliffs + 1
@@ -551,6 +553,17 @@ function AreaScanner.set_filter_mask(settings, mask)
       settings.counters[filter.name].is_shown = (band(mask, pow(2, i)) ~= 0)
     end
   end
+end
+
+function AreaScanner.cache_infinite_resources()
+  local resources={}
+  local filter = {{filter = "type", type = "resource"}}
+  for name, e_prototype in pairs(game.get_filtered_entity_prototypes(filter)) do
+    if e_prototype.infinite_resource  then
+      resources[name] = true
+    end
+  end
+  global.infinite_resources = resources
 end
 
 return AreaScanner

@@ -5,23 +5,24 @@ GUI_util = require "lualib.gui-util"
 AreaScannerGUI = require "lualib.scanner-gui"
 AreaScanner = require "lualib.scanner"
 
+local function init_caches()
+  RB_util.cache_rocks_names()
+  GUI_util.cache_signals()
+  Deployer.cache_blueprint_signals()
+  AreaScanner.cache_infinite_resources()
+  -- Check deleted signals in the default scanner settings.
+  AreaScanner.mark_unknown_signals(AreaScanner.DEFAULT_SCANNER_SETTINGS)
+end
+
 local function on_init()
   global.deployers = {}
   global.fuel_requests = {}
   global.scanners = {}
-  global.blueprints = {}
-  GUI_util.cache_signals()
-  AreaScanner.mark_unknown_signals(AreaScanner.DEFAULT_SCANNER_SETTINGS)
-  Deployer.cache_blueprint_signals()
+  init_caches()
 end
 
 local function on_mods_changed(event)
-  global.blueprints = {}
-  if not global.scanners then global.scanners = {} end
-
-  -- Check deleted signals in the default scanner settings.
-  GUI_util.cache_signals()
-  AreaScanner.mark_unknown_signals(AreaScanner.DEFAULT_SCANNER_SETTINGS)
+  init_caches()
 
   --Migrate deployers and scanners to new mod name
   if (event and event.mod_changes) and
@@ -70,8 +71,6 @@ local function on_mods_changed(event)
       player.opened = nil
     end
   end
-
-  Deployer.cache_blueprint_signals()
 end
 
 local function on_setting_changed(event)

@@ -134,6 +134,16 @@ function RB_util.on_item_request(unit_number)
   end
 end
 
+function RB_util.cache_rocks_names()
+  local rocks={}
+  for name, e_prototype in pairs(game.entity_prototypes) do
+    if e_prototype.count_as_rock_for_filtered_deconstruction  then
+      rocks[name] = true
+    end
+  end
+  global.rocks_names = rocks
+end
+
 -->>DEPRICATET FUNCTIONS>>--
 
 function RB_util.round(n)

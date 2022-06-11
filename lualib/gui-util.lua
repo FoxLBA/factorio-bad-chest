@@ -157,7 +157,7 @@ end
 -- Collect all visible circuit network signals.
 -- Sort them by group and subgroup.
 function GUI_util.cache_signals()
-  global.gui_util_groups = {}
+  gui_groups = {}
   for _, group in pairs(game.item_group_prototypes) do
     for _, subgroup in pairs(group.subgroups) do
       if subgroup.name == "other" or subgroup.name == "virtual-signal-special" then
@@ -192,14 +192,15 @@ function GUI_util.cache_signals()
         end
         -- Cache the visible signals
         if #signals > 0 then
-          if #global.gui_util_groups == 0 or global.gui_util_groups[#global.gui_util_groups].name ~= group.name then
-            table.insert(global.gui_util_groups, {name = group.name, subgroups = {}})
+          if #gui_groups == 0 or gui_groups[#gui_groups].name ~= group.name then
+            table.insert(gui_groups, {name = group.name, subgroups = {}})
           end
-          table.insert(global.gui_util_groups[#global.gui_util_groups].subgroups, signals)
+          table.insert(gui_groups[#gui_groups].subgroups, signals)
         end
       end
     end
   end
+  global.gui_util_groups = gui_groups
 end
 
 ---Adds tabs frame with signals for selection.
