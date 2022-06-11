@@ -1,6 +1,5 @@
 require "util"
-require "lualib.logging"
-require "lualib.deployer"
+Deployer = require "lualib.deployer"
 RB_util = require "lualib.rb-util"
 GUI_util = require "lualib.gui-util"
 AreaScannerGUI = require "lualib.scanner-gui"
@@ -13,7 +12,7 @@ local function on_init()
   global.blueprints = {}
   GUI_util.cache_signals()
   AreaScanner.mark_unknown_signals(AreaScanner.DEFAULT_SCANNER_SETTINGS)
-  cache_blueprint_signals()
+  Deployer.cache_blueprint_signals()
 end
 
 local function on_mods_changed(event)
@@ -72,7 +71,7 @@ local function on_mods_changed(event)
     end
   end
 
-  cache_blueprint_signals()
+  Deployer.cache_blueprint_signals()
 end
 
 local function on_setting_changed(event)
@@ -85,11 +84,13 @@ local function on_setting_changed(event)
 end
 
 local function on_tick()
+  local deployer_tick = Deployer.on_tick_deployer
   for _, deployer in pairs(global.deployers) do
-    on_tick_deployer(deployer)
+    deployer_tick(deployer)
   end
+  local scanner_tick = AreaScanner.on_tick_scanner
   for _, scanner in pairs(global.scanners) do
-    AreaScanner.on_tick_scanner(scanner)
+    scanner_tick(scanner)
   end
 end
 

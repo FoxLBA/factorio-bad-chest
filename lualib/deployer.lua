@@ -1,3 +1,5 @@
+local Deployer = {}
+
 -- Command signals
 local DEPLOY_SIGNAL = {name="construction-robot", type="item"}
 local DECONSTRUCT_SIGNAL = {name="deconstruction-planner", type="item"}
@@ -15,7 +17,7 @@ for i = 1, 5 do
     )
 end
 
-function deploy_blueprint(bp, deployer)
+function Deployer.deploy_blueprint(bp, deployer)
   if not bp then return end
   if not bp.valid_for_read then return end
   if not bp.is_blueprint_setup() then return end
@@ -31,7 +33,7 @@ function deploy_blueprint(bp, deployer)
     direction = defines.direction.west
   end
 
-  local position = get_target_position(deployer)
+  local position = Deployer.get_target_position(deployer)
   if not position then return end
 
   -- Build blueprint
@@ -50,13 +52,13 @@ function deploy_blueprint(bp, deployer)
       stack = bp,
     })
   end
-  deployer_logging("point_deploy", deployer,
+  Deployer.deployer_logging("point_deploy", deployer,
                     {bp = bp, position = position, direction = direction}
                   )
 end
 
-function deconstruct_area(bp, deployer, deconstruct)
-  local area = get_area(deployer)
+function Deployer.deconstruct_area(bp, deployer, deconstruct)
+  local area = Deployer.get_area(deployer)
   local force = deployer.force
   if deconstruct == false then
     -- Cancel area
@@ -80,14 +82,14 @@ function deconstruct_area(bp, deployer, deconstruct)
       deployer.cancel_deconstruction(force)
     end
   end
-  deployer_logging("area_deploy", deployer,
+  Deployer.deployer_logging("area_deploy", deployer,
                     {sub_type = "deconstract", bp = bp,
                     area = area, apply = deconstruct}
                   )
 end
 
-function upgrade_area(bp, deployer, upgrade)
-  local area = get_area(deployer)
+function Deployer.upgrade_area(bp, deployer, upgrade)
+  local area = Deployer.get_area(deployer)
   if upgrade == false then
     -- Cancel area
     deployer.surface.cancel_upgrade_area{
@@ -105,13 +107,13 @@ function upgrade_area(bp, deployer, upgrade)
       item = bp,
     }
   end
-  deployer_logging("area_deploy", deployer,
+  Deployer.deployer_logging("area_deploy", deployer,
                     {sub_type = "upgrade", bp = bp,
                     area = area, apply = upgrade}
                   )
 end
 
-function on_tick_deployer(deployer)
+function Deployer.on_tick_deployer(deployer)
   if not deployer.valid then return end
   -- Read deploy signal
   local get_signal = deployer.get_merged_signal
@@ -133,12 +135,12 @@ function on_tick_deployer(deployer)
           if not bp.is_blueprint_book then break end
         end
         -- Pick active item from nested blueprint books
-        bp = get_nested_blueprint(bp)
+        bp = Deployer.get_nested_blueprint(bp)
         if not bp or not bp.valid_for_read then return end
       end
-      if bp.is_blueprint then deploy_blueprint(bp, deployer)
-      elseif bp.is_deconstruction_item then deconstruct_area(bp, deployer, true)
-      elseif bp.is_upgrade_item then upgrade_area(bp, deployer, true)
+      if bp.is_blueprint then Deployer.deploy_blueprint(bp, deployer)
+      elseif bp.is_deconstruction_item then Deployer.deconstruct_area(bp, deployer, true)
+      elseif bp.is_upgrade_item then Deployer.upgrade_area(bp, deployer, true)
       end
 
     elseif deploy == -1 then
@@ -146,10 +148,10 @@ function on_tick_deployer(deployer)
       if not bp.valid_for_read then return end
       if bp.is_deconstruction_item then
         -- Cancel deconstruction in area
-        deconstruct_area(bp, deployer, false)
+        Deployer.deconstruct_area(bp, deployer, false)
       elseif bp.is_upgrade_item then
         -- Cancel upgrade in area
-        upgrade_area(bp, deployer, false)
+        Deployer.upgrade_area(bp, deployer, false)
       end
     end
     return
@@ -160,14 +162,14 @@ function on_tick_deployer(deployer)
   if deconstruct ~= 0 then
     if deconstruct == -1 then
       -- Deconstruct area
-      deconstruct_area(nil, deployer, true)
+      Deployer.deconstruct_area(nil, deployer, true)
     elseif deconstruct == -2 then
       -- Deconstruct self
       deployer.order_deconstruction(deployer.force)
-      deployer_logging("self_deconstract", deployer, nil)
+      Deployer.deployer_logging("self_deconstract", deployer, nil)
     elseif deconstruct == -3 then
       -- Cancel deconstruction in area
-      deconstruct_area(nil, deployer, false)
+      Deployer.deconstruct_area(nil, deployer, false)
     end
     return
   end
@@ -177,7 +179,7 @@ function on_tick_deployer(deployer)
   if copy ~= 0 then
     if copy == 1 then
       -- Copy blueprint
-      copy_blueprint(deployer)
+      Deployer.copy_blueprint(deployer)
     elseif copy == -1 then
       -- Delete blueprint
       local stack = deployer.get_inventory(defines.inventory.chest)[1]
@@ -187,14 +189,14 @@ function on_tick_deployer(deployer)
       or stack.is_upgrade_item
       or stack.is_deconstruction_item then
         stack.clear()
-        deployer_logging("destroy_book", deployer, nil)
+        Deployer.deployer_logging("destroy_book", deployer, nil)
       end
     end
     return
   end
 end
 
-function get_area(deployer)
+function Deployer.get_area(deployer)
   local get_signal = deployer.get_merged_signal
   local X = get_signal(X_SIGNAL)
   local Y = get_signal(Y_SIGNAL)
@@ -226,12 +228,12 @@ function get_area(deployer)
   }
 end
 
-function get_area_signals(deployer)
+function Deployer.get_area_signals(deployer)
   local get_signal = deployer.get_merged_signal
   return get_signal(WIDTH_SIGNAL), get_signal(HEIGHT_SIGNAL)
 end
 
-function get_target_position(deployer)
+function Deployer.get_target_position(deployer)
   -- Shift x,y coordinates
   local d_pos = deployer.position
   local get_signal = deployer.get_merged_signal
@@ -250,17 +252,17 @@ function get_target_position(deployer)
   return position
 end
 
-function copy_blueprint(deployer)
+function Deployer.copy_blueprint(deployer)
   local inventory = deployer.get_inventory(defines.inventory.chest)
   if not inventory.is_empty() then return end
   for _, signal in pairs(global.blueprint_signals) do
     -- Check for a signal before doing an expensive search
     if deployer.get_merged_signal(signal) >= 1 then
       -- Signal exists, now we have to search for the blueprint
-      local stack = find_stack_in_network(deployer, signal.name)
+      local stack = Deployer.find_stack_in_network(deployer, signal.name)
       if stack then
         inventory[1].set_stack(stack)
-        deployer_logging("copy_book", deployer, stack)
+        Deployer.deployer_logging("copy_book", deployer, stack)
         return
       end
     end
@@ -274,7 +276,7 @@ end
 
 -- Breadth-first search for an item in the circuit network
 -- If there are multiple items, returns the closest one (least wire hops)
-function find_stack_in_network(deployer, item_name)
+function Deployer.find_stack_in_network(deployer, item_name)
   local present = {
     [con_hash(deployer, defines.circuit_connector_id.container, defines.wire_type.red)] =
     {
@@ -302,7 +304,7 @@ function find_stack_in_network(deployer, item_name)
           local hash = con_hash(def.target_entity, def.target_circuit_id, def.wire)
           if not past[hash] and not present[hash] and not future[hash] then
             -- Search inside the entity
-            local stack = find_stack_in_container(def.target_entity, item_name)
+            local stack = Deployer.find_stack_in_container(def.target_entity, item_name)
             if stack then return stack end
 
             -- Add entity connections to future searches
@@ -321,7 +323,7 @@ function find_stack_in_network(deployer, item_name)
   end
 end
 
-function find_stack_in_container(entity, item_name)
+function Deployer.find_stack_in_container(entity, item_name)
   local e_type = entity.type
   if e_type == "container" or e_type == "logistic-container" then
     local inventory = entity.get_inventory(defines.inventory.chest)
@@ -342,7 +344,7 @@ function find_stack_in_container(entity, item_name)
   end
 end
 
-function get_nested_blueprint(bp)
+function Deployer.get_nested_blueprint(bp)
   if not bp then return end
   if not bp.valid_for_read then return end
   while bp.is_blueprint_book do
@@ -354,7 +356,7 @@ function get_nested_blueprint(bp)
 end
 
 -- Collect all modded blueprint signals in one table
-function cache_blueprint_signals()
+function Deployer.cache_blueprint_signals()
   global.blueprint_signals = {}
   for _, item in pairs(game.item_prototypes) do
     if item.type == "blueprint"
@@ -365,3 +367,67 @@ function cache_blueprint_signals()
     end
   end
 end
+
+local LOGGING_SIGNAL = {name="signal-L", type="virtual"}
+
+local function make_gps_string(position, surface)
+  if position and surface then
+    return string.format("[gps=%s,%s,%s]", position.x, position.y, surface.name)
+  else
+    return "[lost location]"
+  end
+end
+
+local function make_area_string(deployer)
+    if not deployer then return "" end
+    local W, H = Deployer.get_area_signals(deployer)
+    return " W=" .. W .. " H=" .. H
+end
+
+local function make_bp_name_string(bp)
+    if not bp or not bp.valid or not bp.label then return "unnamed" end
+    return bp.label
+end
+
+function Deployer.deployer_logging(msg_type, deployer, vars)
+  local log_settings = settings.global["recursive-blueprints-logging"].value
+  if log_settings == "never" then
+    return
+  else
+    local L = deployer.get_merged_signal(LOGGING_SIGNAL)
+    if (log_settings == "with 'L>0' signal" and L < 1)
+        or (log_settings == "with 'L>=0' signal" and L < 0)
+    then
+      return
+    end
+  end
+
+  local msg = ""
+  local deployer_gps = make_gps_string(deployer.position, deployer.surface)
+
+  --"point_deploy" "area_deploy" "self_deconstract" "destroy_book" "copy_book"
+  if msg_type == "point_deploy" then
+    local target_gps  = make_gps_string(vars.position, deployer.surface)
+    if deployer_gps == target_gps then target_gps = "" end
+    msg = {"recursive-blueprints-deployer-logging.deploy-bp", deployer_gps, make_bp_name_string(vars.bp), target_gps}
+
+  elseif msg_type == "area_deploy" then
+    local target_gps  = make_gps_string(Deployer.get_target_position(deployer), deployer.surface)
+    if deployer_gps == target_gps then target_gps = "" end
+    local sub_msg = vars.sub_type
+    if not vars.apply then sub_msg = "cancel-" .. sub_msg end
+    msg = {"recursive-blueprints-deployer-logging."..sub_msg, deployer_gps, make_bp_name_string(vars.bp), target_gps, make_area_string(deployer)}
+
+  else
+    msg = {"recursive-blueprints-deployer-logging.unknown", deployer_gps, msg_type}
+  end
+
+  if deployer.force and deployer.force.valid then
+    deployer.force.print(msg)
+  else
+    game.print(msg)
+  end
+end
+
+
+return Deployer
