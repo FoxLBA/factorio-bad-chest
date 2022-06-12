@@ -18,6 +18,7 @@ local function on_init()
   global.deployers = {}
   global.fuel_requests = {}
   global.scanners = {}
+  global.blueprints = {}
   init_caches()
 end
 

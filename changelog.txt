@@ -1,9 +1,10 @@
 ---------------------------------------------------------------------------------------------------
 Version: 1.3.6
-Date: ????
+Date: 2022-06-12
   Changes:
     - The demolition plan and the upgrade plan can now be canceled in the books as well. (Using a negative bot signal.)
   Features:
+    - Whitelist/blacklist deconstrucion/cancel without deconstrucion planner (The filter is determined by signals).
     - Deployer logging messages can now be localized.
 ---------------------------------------------------------------------------------------------------
 Version: 1.3.5

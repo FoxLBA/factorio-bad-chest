@@ -136,12 +136,15 @@ end
 
 function RB_util.cache_rocks_names()
   local rocks={}
+  local rocks2={}
   for name, e_prototype in pairs(game.entity_prototypes) do
     if e_prototype.count_as_rock_for_filtered_deconstruction  then
       rocks[name] = true
+      table.insert(rocks2, name)
     end
   end
   global.rocks_names = rocks
+  global.rocks_names2 = rocks2
 end
 
 -->>DEPRICATET FUNCTIONS>>--

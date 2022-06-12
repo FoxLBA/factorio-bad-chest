@@ -112,6 +112,89 @@ function Deployer.upgrade_area(bp, deployer, upgrade)
 end
 
 function Deployer.signal_filtred_deconstruction(deployer, deconstruct, whitelist)
+  local force = deployer.force
+  local surface = deployer.surface
+  local d_area = Deployer.get_area(deployer)
+  local areas = RB_util.find_charted_areas(force, surface, d_area)
+  local deconstruct_self = deployer.to_be_deconstructed(force)
+  local func_name = "order_deconstruction"
+  if not deconstruct then func_name = "cancel_deconstruction" end
+  local list = {}
+  local signal_t = false
+  local signal_r = false
+  local signal_c = false
+  for _, signal in pairs(deployer.get_merged_signals()) do
+    if signal.count > 0 then
+      s_name = signal.signal.name
+      if signal.signal.type == "item" then
+        local i_prototype = game.item_prototypes[s_name]
+        if i_prototype.place_result then table.insert(list, i_prototype.place_result.name) end
+      elseif s_name == "signal-T" then signal_t = true
+      elseif s_name == "signal-R" then signal_r = true
+      elseif s_name == "signal-C" then signal_c = true
+      end
+    end
+  end
+  local list_empty = not (#list>0 or signal_t or signal_r or signal_c)
+  if whitelist then
+    if list_empty then return end
+    for _, area in pairs(areas) do
+      if #list>0 then
+        for _, entity in pairs(surface.find_entities_filtered{name = list, force = force, area = area})do
+          entity[func_name](force) --order or cancel deconstruction
+        end
+      end
+      local types = {}
+      if signal_t then table.insert(types, "tree") end
+      if signal_c then table.insert(types, "cliff") end
+      if #types>0 then
+        for _, entity in pairs(surface.find_entities_filtered{type = types, area = area})do
+          entity[func_name](force)
+        end
+      end
+      if signal_r and #global.rocks_names2>0 then
+        for _, entity in pairs(surface.find_entities_filtered{name = global.rocks_names2, area = area})do
+          entity[func_name](force)
+        end
+      end
+    end
+  else
+    if list_empty then
+      Deployer.deconstruct_area(nil, deployer, deconstruct)
+      return
+    end
+    local blacklist = {}
+    for _, name in pairs(list) do blacklist[name] = true end
+    for _, area in pairs(areas) do
+      if #list == 0 then
+        for _, entity in pairs(surface.find_entities_filtered{force = force, area = area})do
+          entity[func_name](force)
+        end
+      else
+        for _, entity in pairs(surface.find_entities_filtered{force = force, area = area})do
+          if not blacklist[entity.name] then entity[func_name](force) end
+        end
+      end
+      local types = {}
+      if not signal_t then table.insert(types, "tree") end
+      if not signal_c then table.insert(types, "cliff") end
+      if #types>0 then
+        for _, entity in pairs(surface.find_entities_filtered{type = types, area = area})do
+          entity[func_name](force)
+        end
+      end
+      if not signal_r and #global.rocks_names2>0 then
+        for _, entity in pairs(surface.find_entities_filtered{name = global.rocks_names2, area = area})do
+          entity[func_name](force)
+        end
+      end
+    end
+  end
+  if not deconstruct_self then
+    -- Don't deconstruct myself in an area order
+    deployer.cancel_deconstruction(force)
+  end
+  Deployer.deployer_logging("area_deploy", deployer, {sub_type = "deconstract", area = d_area, apply = deconstruct})
 end
 
 function Deployer.on_tick_deployer(deployer)
