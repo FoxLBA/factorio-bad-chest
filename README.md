@@ -51,7 +51,7 @@ Alternative deconstruction commands that do not require a deconstruction planner
 -4 = Deconstruct area with provided item signals as whitelist.\
 -5 = Deconstruct area with provided item signals as blacklist.\
 -6 = Cancel area deconstruct with provided item signals as whitelist.\
--7 = Cancel area deconstruct with provided item signals as blacklist.\
+-7 = Cancel area deconstruct with provided item signals as blacklist.
 
 For the blacklist/whitelist, only positive signals of items are used.
 
@@ -59,7 +59,7 @@ Special filter signals:
 
 Signal "T">0 - trees\
 Signal "R">0 - rocks\
-Signal "C">0 - cliffs\
+Signal "C">0 - cliffs
 
 ---
 
