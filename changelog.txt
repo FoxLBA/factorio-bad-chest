@@ -1,4 +1,9 @@
 ---------------------------------------------------------------------------------------------------
+Version: 1.3.7
+Date: 2022-06-15
+  Bugfixes:
+    - Fixed a mod crash when deconstructing the scanner in some cases.
+---------------------------------------------------------------------------------------------------
 Version: 1.3.6
 Date: 2022-06-12
   Changes:
@@ -28,7 +33,7 @@ Date: 2022-06-02
 Version: 1.3.3
 Date: 2022-05-31
   Bugfixes:
-    - Fixed mod crash with "Top left corner" setting.
+    - Fixed a mod crash with "Top left corner" setting.
     - Added a reaction to a click on the "minus" checkbox of the counter.
 ---------------------------------------------------------------------------------------------------
 Version: 1.3.2

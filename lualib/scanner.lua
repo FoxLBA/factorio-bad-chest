@@ -64,11 +64,12 @@ AreaScanner.FILTER_MASK_ORDER = {
 }
 
 function AreaScanner.on_tick_scanner(scanner)
-  if not scanner.network_imput and scanner.previous then return end
+  local previous = scanner.previous
+  if not scanner.network_imput and previous then return end
+  if not scanner.entity.valid then return end
   -- Copy values from circuit network to scanner
   local changed = false
-  if scanner.previous then
-    local previous = scanner.previous
+  if previous then
     local current  = scanner.current
     local get_signal = scanner.entity.get_merged_signal
     for name, param in pairs(scanner.settings.scan_area) do
