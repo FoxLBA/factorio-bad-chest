@@ -310,7 +310,7 @@ function AreaScannerGUI.create_signal_gui(element)
     filters_flow.add{
       type = "label",
       style = "heading_2_label",
-      caption = "Filters"
+      caption = {"recursive-blueprints.heading_label-filters"}
     }
     for name, state in pairs(scanner.settings.filters) do
       filters_flow.add{
