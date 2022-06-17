@@ -483,8 +483,8 @@ function Deployer.deployer_logging(msg_type, deployer, vars)
     return
   else
     local L = deployer.get_merged_signal(LOGGING_SIGNAL)
-    if (log_settings == "with 'L>0' signal" and L < 1)
-        or (log_settings == "with 'L>=0' signal" and L < 0)
+    if (log_settings == "with_L_greater_than_zero" and L < 1)
+        or (log_settings == "with_L_greater_or_equal_to_zero" and L < 0)
     then
       return
     end
