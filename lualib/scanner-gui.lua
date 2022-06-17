@@ -329,7 +329,7 @@ function AreaScannerGUI.create_signal_gui(element)
     counters_flow.add{
       type = "label",
       style = "heading_2_label",
-      caption = "Counters"
+      caption = {"recursive-blueprints.heading_label-counters"]
     }
     for name, counter in pairs(scanner.settings.counters) do
       counters_flow.add{
