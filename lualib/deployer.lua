@@ -81,7 +81,7 @@ function Deployer.deconstruct_area(bp, deployer, deconstruct)
     end
   end
   Deployer.deployer_logging("area_deploy", deployer,
-                    {sub_type = "deconstract", bp = bp,
+                    {sub_type = "deconstruct", bp = bp,
                     area = area, apply = deconstruct}
                   )
 end
@@ -194,7 +194,7 @@ function Deployer.signal_filtred_deconstruction(deployer, deconstruct, whitelist
     -- Don't deconstruct myself in an area order
     deployer.cancel_deconstruction(force)
   end
-  Deployer.deployer_logging("area_deploy", deployer, {sub_type = "deconstract", area = d_area, apply = deconstruct})
+  Deployer.deployer_logging("area_deploy", deployer, {sub_type = "deconstruct", area = d_area, apply = deconstruct})
 end
 
 function Deployer.on_tick_deployer(deployer)
@@ -242,7 +242,7 @@ function Deployer.on_tick_deployer(deployer)
     elseif deconstruct == -2 then
       -- Deconstruct self
       deployer.order_deconstruction(deployer.force)
-      Deployer.deployer_logging("self_deconstract", deployer, nil)
+      Deployer.deployer_logging("self_deconstruct", deployer, nil)
     elseif deconstruct == -3 then
       -- Cancel deconstruction in area
       Deployer.deconstruct_area(nil, deployer, false)
@@ -493,7 +493,7 @@ function Deployer.deployer_logging(msg_type, deployer, vars)
   local msg = ""
   local deployer_gps = make_gps_string(deployer.position, deployer.surface)
 
-  --"point_deploy" "area_deploy" "self_deconstract" "destroy_book" "copy_book"
+  --"point_deploy" "area_deploy" "self_deconstruct" "destroy_book" "copy_book"
   if msg_type == "point_deploy" then
     local target_gps  = make_gps_string(vars.position, deployer.surface)
     if deployer_gps == target_gps then target_gps = "" end
