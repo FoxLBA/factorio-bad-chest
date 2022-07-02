@@ -157,7 +157,7 @@ end
 -- Collect all visible circuit network signals.
 -- Sort them by group and subgroup.
 function GUI_util.cache_signals()
-  gui_groups = {}
+  local gui_groups = {}
   for _, group in pairs(game.item_group_prototypes) do
     for _, subgroup in pairs(group.subgroups) do
       if subgroup.name == "other" or subgroup.name == "virtual-signal-special" then

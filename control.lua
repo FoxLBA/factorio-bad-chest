@@ -135,7 +135,7 @@ local function on_player_setup_blueprint(event)
     if blueprint_entities then
       for _, bp_entity in pairs(blueprint_entities) do
         local entity = mapping[bp_entity.entity_number]
-        if entity.train and not entity.train.manual_mode then
+        if entity and entity.train and not entity.train.manual_mode then
           --Add train tags for automatic mode
           found = true
           if not bp_entity.tags then bp_entity.tags = {} end
