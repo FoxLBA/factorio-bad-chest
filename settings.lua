@@ -11,7 +11,7 @@ data:extend{
     name = "recursive-blueprints-logging",
     setting_type = "runtime-global",
     default_value = "never",
-    allowed_values = {"never", "with 'L>0' signal", "with 'L>=0' signal", "always"},
+    allowed_values = {"never", "with_L_greater_than_zero", "with_L_greater_or_equal_to_zero", "always"},
   },
   {
     type = "int-setting",
