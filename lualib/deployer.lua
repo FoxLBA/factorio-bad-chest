@@ -123,18 +123,25 @@ function Deployer.signal_filtred_deconstruction(deployer, deconstruct, whitelist
   local signal_t = false
   local signal_r = false
   local signal_c = false
+  -- Read whitelist/blacklist from signals.
   for _, signal in pairs(deployer.get_merged_signals()) do
     if signal.count > 0 then
-      s_name = signal.signal.name
+      local s_name = signal.signal.name
       if signal.signal.type == "item" then
         local i_prototype = game.item_prototypes[s_name]
-        if i_prototype.place_result then table.insert(list, i_prototype.place_result.name) end
+        if i_prototype.place_result then
+          table.insert(list, i_prototype.place_result.name)
+          if i_prototype.curved_rail then
+            table.insert(list, i_prototype.curved_rail.name)
+          end
+        end
       elseif s_name == "signal-T" then signal_t = true
       elseif s_name == "signal-R" then signal_r = true
       elseif s_name == "signal-C" then signal_c = true
       end
     end
   end
+  -- Apply a blacklist/whitelist.
   local list_empty = not (#list>0 or signal_t or signal_r or signal_c)
   if whitelist then
     if list_empty then return end

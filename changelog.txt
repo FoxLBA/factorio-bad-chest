@@ -1,7 +1,8 @@
 ---------------------------------------------------------------------------------------------------
 Version: 1.3.9
-Date: ????
+Date: 2022-08-07
   Changes:
+    - Curved rails are added together with straight rails to the blacklist/whitelist for filtered decunstruction in the deployer.
   Bugfixes:
     - Fixed crash with certain scanner filters.
   Locale:
