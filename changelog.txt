@@ -2,6 +2,8 @@
 Version: 1.3.9
 Date: ????
   Changes:
+  Bugfixes:
+    - Fixed crash with certain scanner filters.
   Locale:
     - Added French localisation, thanks to xorblo-doitus.
 ---------------------------------------------------------------------------------------------------

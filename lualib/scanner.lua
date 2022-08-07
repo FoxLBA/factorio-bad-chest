@@ -218,20 +218,28 @@ function AreaScanner.on_destroyed_scanner(unit_number)
   end
 end
 
-function AreaScanner.count_mineable_entity(source, dest)
+function AreaScanner.count_mineable_entity(source, dest, merge)
   local counter = 0
-  for name, count in pairs(source) do
-    local prototype = game.entity_prototypes[name]
-    local m_p = prototype.mineable_properties
-    if m_p and m_p.minable and m_p.products then
-      counter = counter + count
-      for _, product in pairs(m_p.products) do
-        local amount = product.amount
-        if product.amount_min and product.amount_max then
-          amount = (product.amount_min + product.amount_max) / 2
-          amount = amount * product.probability
+  if merge then
+    for name, count in pairs(source) do
+      local m_p = game.entity_prototypes[name].mineable_properties
+      if m_p and m_p.minable and m_p.products then
+        counter = counter + count
+        for _, product in pairs(m_p.products) do
+          local amount = product.amount
+          if product.amount_min and product.amount_max then
+            amount = (product.amount_min + product.amount_max) / 2
+            amount = amount * product.probability
+          end
+          dest[product.type][product.name] = (dest[product.type][product.name] or 0) + (amount or 0) * count
         end
-        dest[product.type][product.name] = (dest[product.type][product.name] or 0) + (amount or 0) * count
+      end
+    end
+  else
+    for name, count in pairs(source) do
+      local m_p = game.entity_prototypes[name].mineable_properties
+      if m_p and m_p.minable and m_p.products then
+        counter = counter + count
       end
     end
   end
@@ -317,11 +325,11 @@ function AreaScanner.scan_resources(scanner)
 
   local result1 = {item = {}, fluid = {}, virtual = {}}
   local result2 = {item = {}, fluid = {}, virtual = {}}
-  if filters.show_resources then AreaScanner.count_mineable_entity(scans.resources, result1) end
-  if filters.show_environment then scans.counters.trees_and_rocks = AreaScanner.count_mineable_entity(scans.environment, result1) end
+  if filters.show_resources then AreaScanner.count_mineable_entity(scans.resources, result1, true) end
+  scans.counters.trees_and_rocks = AreaScanner.count_mineable_entity(scans.environment, result1, filters.show_environment)
   if filters.show_items_on_ground then result2.item = scans.items_on_ground end
-  if filters.show_buildings then scans.counters.buildings = AreaScanner.count_mineable_entity(scans.buildings, result2) end
-  if filters.show_ghosts then scans.counters.ghosts = AreaScanner.count_mineable_entity(scans.ghosts, result2) end
+  scans.counters.buildings = AreaScanner.count_mineable_entity(scans.buildings, result2, filters.show_buildings)
+  scans.counters.ghosts = AreaScanner.count_mineable_entity(scans.ghosts, result2, filters.show_ghosts)
 
   -- Copy resources to combinator output
   local behavior = scanner.entity.get_control_behavior()
@@ -333,7 +341,7 @@ function AreaScanner.scan_resources(scanner)
   for name, counter_setting in pairs(counters) do
     if counter_setting.is_shown and counter_setting.signal then
       local count = scans.counters[name]
-      if count ~= 0 then
+      if count and count ~= 0 then
         if counter_setting.is_negative then count = -count end
         count = AreaScanner.check_scan_signal_collision(count, result1, counter_setting.signal)
         count = AreaScanner.check_scan_signal_collision(count, result2, counter_setting.signal)
