@@ -1,7 +1,12 @@
 local Deployer = {}
 
 -- Command signals
-local DEPLOY_SIGNAL = {name="construction-robot", type="item"}
+local DEPLOY_SIGNAL
+if script.active_mods["nullius"] then
+  DEPLOY_SIGNAL = {name="nullius-construction-bot-1", type="item"}
+else
+  DEPLOY_SIGNAL = {name="construction-robot", type="item"}
+end
 local DECONSTRUCT_SIGNAL = {name="deconstruction-planner", type="item"}
 local COPY_SIGNAL = {name="signal-C", type="virtual"}
 local X_SIGNAL = {name="signal-X", type="virtual"}
