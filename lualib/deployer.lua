@@ -464,6 +464,7 @@ function Deployer.cache_blueprint_signals()
 end
 
 local LOGGING_SIGNAL = {name="signal-L", type="virtual"}
+local LOGGING_LEVEL = 0
 
 local function make_gps_string(position, surface)
   if position and surface then
@@ -484,17 +485,9 @@ local function make_bp_name_string(bp)
     return bp.label
 end
 
-function Deployer.deployer_logging(msg_type, deployer, vars)
-  local log_settings = settings.global["recursive-blueprints-logging"].value
-  if log_settings == "never" then
+local function deployer_logging_func(msg_type, deployer, vars)
+  if deployer.get_merged_signal(LOGGING_SIGNAL) < LOGGING_LEVEL then
     return
-  else
-    local L = deployer.get_merged_signal(LOGGING_SIGNAL)
-    if (log_settings == "with_L_greater_than_zero" and L < 1)
-        or (log_settings == "with_L_greater_or_equal_to_zero" and L < 0)
-    then
-      return
-    end
   end
 
   local msg = ""
@@ -524,5 +517,24 @@ function Deployer.deployer_logging(msg_type, deployer, vars)
   end
 end
 
+local function empty_func() end
+
+Deployer.deployer_logging = empty_func
+
+function Deployer.toggle_logging()
+  local log_settings = settings.global["recursive-blueprints-logging"].value
+  if log_settings == "never" then
+    Deployer.deployer_logging = empty_func
+  else
+    Deployer.deployer_logging = deployer_logging_func
+    if log_settings == "with_L_greater_or_equal_to_zero" then
+      LOGGING_LEVEL = 0
+    elseif log_settings == "with_L_greater_than_zero" then
+      LOGGING_LEVEL = 1
+    else
+      LOGGING_LEVEL = -4000000000
+    end
+  end
+end
 
 return Deployer

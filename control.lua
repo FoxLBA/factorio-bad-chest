@@ -9,6 +9,7 @@ local function init_caches()
   RB_util.cache_rocks_names()
   GUI_util.cache_signals()
   Deployer.cache_blueprint_signals()
+  Deployer.toggle_logging()
   AreaScanner.cache_infinite_resources()
   -- Check deleted signals in the default scanner settings.
   AreaScanner.mark_unknown_signals(AreaScanner.DEFAULT_SCANNER_SETTINGS)
@@ -80,6 +81,8 @@ local function on_setting_changed(event)
     for _, scanner in pairs(global.scanners) do
       AreaScanner.scan_resources(scanner)
     end
+  elseif event.setting == "recursive-blueprints-logging" then
+    Deployer.toggle_logging()
   end
 end
 
