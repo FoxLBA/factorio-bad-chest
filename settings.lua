@@ -31,6 +31,6 @@ data:extend{
     type = "bool-setting",
     name = "recursive-blueprints-alternative-scaner-default",
     setting_type = "runtime-global",
-    default_value = false
+    default_value = true
   }
 }
