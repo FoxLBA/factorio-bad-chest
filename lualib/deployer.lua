@@ -17,6 +17,16 @@ for i = 1, 5 do
     )
 end
 
+function Deployer.toggle_deploy_signal_setting()
+  if settings.global["recursive-blueprints-alternative-deployer-deploy-signal"].value then
+    DEPLOY_SIGNAL.name = "signal-0"
+    DEPLOY_SIGNAL.type = "virtual"
+  else
+    DEPLOY_SIGNAL.name = "construction-robot"
+    DEPLOY_SIGNAL.type = "item"
+  end
+end
+
 function Deployer.deploy_blueprint(bp, deployer)
   if not bp.is_blueprint_setup() then return end
 

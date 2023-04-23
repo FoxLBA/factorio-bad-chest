@@ -20,5 +20,17 @@ data:extend{
     minimum_value = 0,
     maximum_value = 50,
     default_value = 10
-}
+  },
+  {
+    type = "bool-setting",
+    name = "recursive-blueprints-alternative-deployer-deploy-signal",
+    setting_type = "runtime-global",
+    default_value = false
+  },
+  {
+    type = "bool-setting",
+    name = "recursive-blueprints-alternative-scaner-default",
+    setting_type = "runtime-global",
+    default_value = false
+  }
 }

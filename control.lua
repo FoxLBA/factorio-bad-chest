@@ -83,6 +83,10 @@ local function on_setting_changed(event)
     end
   elseif event.setting == "recursive-blueprints-logging" then
     Deployer.toggle_logging()
+  elseif event.setting == "recursive-blueprints-alternative-deployer-deploy-signal" then
+    Deployer.toggle_deploy_signal_setting()
+  elseif event.setting == "recursive-blueprints-alternative-scaner-default" then
+    AreaScanner.toggle_default_settings()
   end
 end
 

@@ -12,7 +12,7 @@ AreaScanner.MILITARY_STRUCTURES = {
   ["unit-spawner"] = true,
 }
 
-AreaScanner.DEFAULT_SCANNER_SETTINGS = {
+local OLD_SCANNER_SETTINGS = {
   version = {
     mod_name = script.mod_name,
     version = script.active_mods[script.mod_name]
@@ -44,6 +44,41 @@ AreaScanner.DEFAULT_SCANNER_SETTINGS = {
     to_be_deconstructed = {is_shown = false, signal = {name="signal-D", type="virtual"}, is_negative = false},
   }
 }
+
+local NEW_SCANNER_SETTINGS = {
+  version = {
+    mod_name = script.mod_name,
+    version = script.active_mods[script.mod_name]
+  },
+  scan_area = { --number or signal
+    x = {name="signal-X", type="virtual"},
+    y = {name="signal-Y", type="virtual"},
+    width = {name="signal-W", type="virtual"},
+    height = {name="signal-H", type="virtual"},
+    filter = {name="signal-F", type="virtual"}
+  },
+  filters = {
+    show_resources = true,
+    show_environment = true, -- trees, rocks, fish
+    show_buildings = false,
+    show_ghosts = false,
+    show_items_on_ground = false,
+  },
+  counters = {
+    uncharted   = {is_shown = true, signal = {name="signal-black", type="virtual"}, is_negative = false},
+    cliffs      = {is_shown = true, signal = {name="signal-C", type="virtual"}, is_negative = false},
+    targets     = {is_shown = true, signal = {name="signal-E", type="virtual"}, is_negative = false},
+    water       = {is_shown = true, signal = {name="signal-L", type="virtual"}, is_negative = false},
+    resources   = {is_shown = false, signal = {name="signal-O", type="virtual"}, is_negative = false},
+    buildings   = {is_shown = false, signal = {name="signal-B", type="virtual"}, is_negative = false},
+    ghosts      = {is_shown = false, signal = {name="signal-G", type="virtual"}, is_negative = false},
+    items_on_ground = {is_shown = false, signal = {name="signal-I", type="virtual"}, is_negative = false},
+    trees_and_rocks = {is_shown = false, signal = {name="signal-T", type="virtual"}, is_negative = false},
+    to_be_deconstructed = {is_shown = false, signal = {name="signal-D", type="virtual"}, is_negative = false},
+  }
+}
+
+AreaScanner.DEFAULT_SCANNER_SETTINGS = OLD_SCANNER_SETTINGS
 
 AreaScanner.FILTER_MASK_ORDER = {
   {group = "filters",  name = "show_resources"},
@@ -573,6 +608,14 @@ function AreaScanner.cache_infinite_resources()
     end
   end
   global.infinite_resources = resources
+end
+
+function AreaScanner.toggle_default_settings()
+  if settings.global["recursive-blueprints-alternative-scaner-default"].value then
+    AreaScanner.DEFAULT_SCANNER_SETTINGS = NEW_SCANNER_SETTINGS
+  else
+    AreaScanner.DEFAULT_SCANNER_SETTINGS = OLD_SCANNER_SETTINGS
+  end
 end
 
 return AreaScanner
