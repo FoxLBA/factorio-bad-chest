@@ -45,7 +45,7 @@ local function on_mods_changed(event)
   if (event and event.mod_changes)
   and (event.mod_changes["rec-blue-plus"]
   and event.mod_changes["rec-blue-plus"].old_version
-  and event.mod_changes["rec-blue-plus"].old_version < "1.3.5") then
+  and event.mod_changes["rec-blue-plus"].old_version < "1.3.10") then
     for _, scanner in pairs(global.scanners or {}) do
         AreaScanner.on_built_scanner(scanner.entity, {tags = scanner})
     end

@@ -630,7 +630,7 @@ function AreaScannerGUI.update_scanner_gui(gui)
   local scanner = global.scanners[gui.tags["recursive-blueprints-id"]]
   if not scanner then return end
   if not scanner.entity.valid then return end
-  local scan_area = scanner.previous
+  local scan_area = scanner.current
 
   -- Update area dimensions
   local input_flow = gui.children[1].children[2].children[2].children[1].children[2]
