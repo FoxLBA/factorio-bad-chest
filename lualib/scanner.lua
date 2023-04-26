@@ -72,7 +72,7 @@ local NEW_SCANNER_SETTINGS = {
   }
 }
 
-AreaScanner.DEFAULT_SCANNER_SETTINGS = OLD_SCANNER_SETTINGS
+AreaScanner.DEFAULT_SCANNER_SETTINGS = NEW_SCANNER_SETTINGS
 
 AreaScanner.FILTER_MASK_ORDER = {
   {group = "filters",  name = "show_resources"},
@@ -772,7 +772,7 @@ function AreaScanner.cache_infinite_resources()
 end
 
 function AreaScanner.toggle_default_settings()
-  if settings.global["recursive-blueprints-alternative-scaner-default"].value then
+  if settings.global["recursive-blueprints-old-scaner-default"].value then
     AreaScanner.DEFAULT_SCANNER_SETTINGS = OLD_SCANNER_SETTINGS
   else
     AreaScanner.DEFAULT_SCANNER_SETTINGS = NEW_SCANNER_SETTINGS

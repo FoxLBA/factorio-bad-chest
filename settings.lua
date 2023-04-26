@@ -22,10 +22,11 @@ data:extend{
     default_value = 10
   },
   {
-    type = "bool-setting",
-    name = "recursive-blueprints-alternative-deployer-deploy-signal",
+    type = "string-setting",
+    name = "recursive-blueprints-deployer-deploy-signal",
     setting_type = "runtime-global",
-    default_value = false
+    default_value = "construction_robot",
+    allowed_values = {"construction_robot", "zero", "both"}
   },
   {
     type = "bool-setting",

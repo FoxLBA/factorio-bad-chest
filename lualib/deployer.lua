@@ -17,13 +17,30 @@ for i = 1, 5 do
     )
 end
 
+local function read_1_deploy_signal(get_signal)
+  return get_signal(DEPLOY_SIGNAL)
+end
+local ALT_DEPLOY_SIGNAL = {name="construction-robot", type="item"}
+local function read_2_deploy_signals(get_signal)
+  local value = get_signal(DEPLOY_SIGNAL)
+  if value == 0 then value = get_signal(ALT_DEPLOY_SIGNAL) end
+  return value
+end
+local read_deploy_signal = read_1_deploy_signal
+
 function Deployer.toggle_deploy_signal_setting()
-  if settings.global["recursive-blueprints-alternative-deployer-deploy-signal"].value then
-    DEPLOY_SIGNAL.name = "signal-0"
-    DEPLOY_SIGNAL.type = "virtual"
-  else
+  local value = settings.global["recursive-blueprints-deployer-deploy-signal"].value
+  if value == "construction_robot" then
     DEPLOY_SIGNAL.name = "construction-robot"
     DEPLOY_SIGNAL.type = "item"
+  else
+    DEPLOY_SIGNAL.name = "signal-0"
+    DEPLOY_SIGNAL.type = "virtual"
+  end
+  if value == "both" then
+    read_deploy_signal = read_2_deploy_signals
+  else
+    read_deploy_signal = read_1_deploy_signal
   end
 end
 
@@ -218,7 +235,7 @@ function Deployer.on_tick_deployer(deployer)
   if not deployer.valid then return end
   -- Read deploy signal
   local get_signal = deployer.get_merged_signal
-  local deploy = get_signal(DEPLOY_SIGNAL)
+  local deploy = read_deploy_signal(get_signal)
   if deploy ~= 0 then
     local command_direction = deploy > 0
     if not command_direction then deploy = -deploy end
