@@ -247,11 +247,11 @@ function AreaScanner.on_destroyed_scanner(unit_number)
   end
 end
 
-local function count_mineable_entity(source, dest, merge)
+local function count_mineable(prototypes, source, dest, merge)
   local counter = 0
   if merge then
     for name, count in pairs(source) do
-      local m_p = game.entity_prototypes[name].mineable_properties
+      local m_p = prototypes[name].mineable_properties
       if m_p and m_p.minable and m_p.products then
         counter = counter + count
         for _, product in pairs(m_p.products) do
@@ -266,7 +266,7 @@ local function count_mineable_entity(source, dest, merge)
     end
   else
     for name, count in pairs(source) do
-      local m_p = game.entity_prototypes[name].mineable_properties
+      local m_p = prototypes[name].mineable_properties
       if m_p and m_p.minable and m_p.products then
         counter = counter + count
       end
@@ -280,39 +280,7 @@ function AreaScanner.scan_resources(scanner)
   if not scanner then return end
   if not scanner.entity.valid then return end
 
-  local scanner_settings = scanner.settings
-  local filters = scanner_settings.filters
-  local counters = scanner_settings.counters
   local force = scanner.entity.force
-  local forces = {} --Rough filter.
-  if filters.show_resources or filters.show_environment or filters.show_items_on_ground
-  or counters.cliffs.is_shown or counters.resources.is_shown
-  or counters.items_on_ground.is_shown or counters.trees_and_rocks.is_shown then
-    forces = {"neutral"} --(ore, cliffs, items_on_ground, trees_and_rocks)
-  end
-  if counters.targets.is_shown then
-    -- Count enemy bases
-    for _, enemy in pairs(game.forces) do
-      if force ~= enemy
-      and enemy.name ~= "neutral"
-      and not force.get_friend(enemy)
-      and not force.get_cease_fire(enemy) then
-        table.insert(forces, enemy.name)
-      end
-    end
-  end
-  if filters.show_buildings or filters.show_ghosts
-  or counters.buildings.is_shown or counters.ghosts.is_shown
-  or counters.to_be_deconstructed.is_shown then
-    table.insert(forces, force.name) --(buildings, ghosts, to_be_deconstructed)
-  end
-
-  if #forces == 0 and not counters.water.is_shown
-  and not counters.uncharted.is_shown then --nothing to scan
-    scanner.entity.get_control_behavior().parameters = nil
-    return
-  end
-
   local surface = scanner.entity.surface
   local scan_area_settings = scanner.current
   local x = scan_area_settings.x
@@ -344,6 +312,9 @@ function AreaScanner.scan_resources(scanner)
     scans = AreaScanner.scan_area(surface, areas, force, scan_area_settings.filter)
   end
 
+  local scanner_settings = scanner.settings
+  local filters = scanner_settings.filters
+  local counters = scanner_settings.counters
   scans.counters.uncharted = uncharted
   if counters.water.is_shown then
     local water = 0
@@ -355,11 +326,12 @@ function AreaScanner.scan_resources(scanner)
 
   local result1 = {item = {}, fluid = {}, virtual = {}} -- counters, ore, trees, rocks, fish
   local result2 = {item = {}, fluid = {}, virtual = {}} -- buildings, ghosts, items on ground
-  if filters.show_resources then count_mineable_entity(scans.resources, result1, true) end
-  scans.counters.trees_and_rocks = count_mineable_entity(scans.environment, result1, filters.show_environment)
+  if filters.show_resources then count_mineable(game.entity_prototypes, scans.resources, result1, true) end
+  scans.counters.trees_and_rocks = count_mineable(game.entity_prototypes, scans.environment, result1, filters.show_environment)
   if filters.show_items_on_ground then result2.item = scans.items_on_ground end
-  scans.counters.buildings = count_mineable_entity(scans.buildings, result2, filters.show_buildings)
-  scans.counters.ghosts = count_mineable_entity(scans.ghosts, result2, filters.show_ghosts)
+  scans.counters.buildings = count_mineable(game.entity_prototypes, scans.buildings, result2, filters.show_buildings)
+  scans.counters.ghosts = count_mineable(game.entity_prototypes, scans.ghosts, result2, filters.show_ghosts)
+                        + count_mineable(game.tile_prototypes, scans.ghost_tiles, result2, filters.show_ghosts)
 
   -- Copy resources to combinator output
   local behavior = scanner.entity.get_control_behavior()
@@ -455,6 +427,7 @@ end
     environment = {[entity_name] = 0, ...},
     buildings = {[entity_name] = 0, ...},
     ghosts = {[entity_name] = 0, ...},
+    ghost_tiles = {[entity_name] = 0, ...},
     items_on_ground = {[entity_name] = 0, ...},
     counters = {
       uncharted = 0, -- It is added outside of this function because it counts chunks.
@@ -478,6 +451,7 @@ function AreaScanner.scan_area(surface, areas, scanner_force, filter)
   local environment = {}
   local buildings = {}
   local ghosts = {}
+  local ghost_tiles = {}
   local items_on_ground = {}
   local counters = {resources = 0, cliffs = 0, items_on_ground = 0, to_be_deconstructed = 0, targets = 0}
 
@@ -553,6 +527,10 @@ function AreaScanner.scan_area(surface, areas, scanner_force, filter)
           blacklist[hash] = true
         end
       end
+      for _, entity in pairs(surface.find_entities_filtered{area = area, force = scanner_force, name = "tile-ghost"}) do
+        local ghost_name = entity.ghost_name
+        ghost_tiles[ghost_name] = (ghost_tiles[ghost_name] or 0) + 1
+      end
     end
   end -- Ghosts
 
@@ -625,7 +603,7 @@ function AreaScanner.scan_area(surface, areas, scanner_force, filter)
     end
   end -- Enemy base
 
-  return {resources = resources, environment = environment, buildings = buildings, ghosts = ghosts, items_on_ground = items_on_ground, counters = counters}
+  return {resources = resources, environment = environment, buildings = buildings, ghosts = ghosts, ghost_tiles = ghost_tiles, items_on_ground = items_on_ground, counters = counters}
 end
 
 -- Almost a complete copy of "AreaScanner.scan_area()"
@@ -637,6 +615,7 @@ function AreaScanner.scan_area_no_hash(surface, area, scanner_force, filter)
   local environment = {}
   local buildings = {}
   local ghosts = {}
+  local ghost_tiles = {}
   local items_on_ground = {}
   local counters = {resources = 0, cliffs = 0, items_on_ground = 0, to_be_deconstructed = 0, targets = 0}
 
@@ -676,6 +655,10 @@ function AreaScanner.scan_area_no_hash(surface, area, scanner_force, filter)
       local ghost_name = entity.ghost_name
       ghosts[ghost_name] = (ghosts[ghost_name] or 0) + 1
     end
+    for _, entity in pairs(surface.find_entities_filtered{area = area, force = scanner_force, name = "tile-ghost"}) do
+      local ghost_name = entity.ghost_name
+      ghost_tiles[ghost_name] = (ghost_tiles[ghost_name] or 0) + 1
+    end
   end -- Ghosts
 
   if band(filter, 32768) > 0 then -- to_be_deconstructed
@@ -703,7 +686,7 @@ function AreaScanner.scan_area_no_hash(surface, area, scanner_force, filter)
     end
   end -- Enemy base
 
-  return {resources = resources, environment = environment, buildings = buildings, ghosts = ghosts, items_on_ground = items_on_ground, counters = counters}
+  return {resources = resources, environment = environment, buildings = buildings, ghosts = ghosts, ghost_tiles = ghost_tiles, items_on_ground = items_on_ground, counters = counters}
 end
 
 -- Out of bounds check.
