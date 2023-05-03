@@ -1,4 +1,11 @@
 ---------------------------------------------------------------------------------------------------
+Version: 1.3.11
+Date: 2023-05-03
+  Changes:
+    - Buildings and ghosts are now counted as items needed for placement instead of mined.
+  Bugfixes:
+    - The scanner can now see landfill ghosts.
+---------------------------------------------------------------------------------------------------
 Version: 1.3.10
 Date: 2023-04-27
   Changes:

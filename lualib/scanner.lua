@@ -275,6 +275,28 @@ local function count_mineable(prototypes, source, dest, merge)
   return counter
 end
 
+local function count_placeable(prototypes, source, dest, merge)
+  local counter = 0
+  if merge then
+    for name, count in pairs(source) do
+      local itpt = prototypes[name].items_to_place_this
+      if itpt and (#itpt > 0) then
+        counter = counter + count
+        local i_name = itpt[1].name
+        dest.item[i_name] = (dest.item[i_name] or 0) + (itpt[1].count or 0) * count
+      end
+    end
+  else
+    for name, count in pairs(source) do
+      local itpt = prototypes[name].items_to_place_this
+      if itpt and (#itpt > 0) then
+        counter = counter + count
+      end
+    end
+  end
+  return counter
+end
+
 ---Scan the area for entitys
 function AreaScanner.scan_resources(scanner)
   if not scanner then return end
@@ -329,9 +351,9 @@ function AreaScanner.scan_resources(scanner)
   if filters.show_resources then count_mineable(game.entity_prototypes, scans.resources, result1, true) end
   scans.counters.trees_and_rocks = count_mineable(game.entity_prototypes, scans.environment, result1, filters.show_environment)
   if filters.show_items_on_ground then result2.item = scans.items_on_ground end
-  scans.counters.buildings = count_mineable(game.entity_prototypes, scans.buildings, result2, filters.show_buildings)
-  scans.counters.ghosts = count_mineable(game.entity_prototypes, scans.ghosts, result2, filters.show_ghosts)
-                        + count_mineable(game.tile_prototypes, scans.ghost_tiles, result2, filters.show_ghosts)
+  scans.counters.buildings = count_placeable(game.entity_prototypes, scans.buildings, result2, filters.show_buildings)
+  scans.counters.ghosts = count_placeable(game.entity_prototypes, scans.ghosts, result2, filters.show_ghosts)
+                        + count_placeable(game.tile_prototypes, scans.ghost_tiles, result2, filters.show_ghosts)
 
   -- Copy resources to combinator output
   local behavior = scanner.entity.get_control_behavior()
