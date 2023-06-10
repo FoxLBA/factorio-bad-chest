@@ -19,6 +19,7 @@ local OLD_SCANNER_SETTINGS = {
     filter = 0
   },
   filters = {
+    blank = false,
     show_resources = true,
     show_environment = true, -- trees, rocks, fish
     show_buildings = false,
@@ -52,6 +53,7 @@ local NEW_SCANNER_SETTINGS = {
     filter = {name="signal-F", type="virtual"}
   },
   filters = {
+    blank = false,
     show_resources = true,
     show_environment = true, -- trees, rocks, fish
     show_buildings = false,
@@ -75,6 +77,7 @@ local NEW_SCANNER_SETTINGS = {
 AreaScanner.DEFAULT_SCANNER_SETTINGS = NEW_SCANNER_SETTINGS
 
 AreaScanner.FILTER_MASK_ORDER = {
+  {group = "filters",  name = "blank"},
   {group = "filters",  name = "show_resources"},
   {group = "filters",  name = "show_environment"},
   {group = "filters",  name = "show_buildings"},
@@ -748,7 +751,7 @@ function AreaScanner.get_filter_mask(settings)
     else
       v = settings.counters[filter.name].is_shown
     end
-    if v then mask = mask + pow(2, i) end
+    if v then mask = mask + pow(2, i-1) end
   end
   return mask
 end
@@ -758,9 +761,9 @@ function AreaScanner.set_filter_mask(settings, mask)
   local band = bit32.band
   for i, filter in pairs(AreaScanner.FILTER_MASK_ORDER) do
     if filter.group == "filters" then
-      settings.filters[filter.name] = (band(mask, pow(2, i)) ~= 0)
+      settings.filters[filter.name] = (band(mask, pow(2, i-1)) ~= 0)
     else
-      settings.counters[filter.name].is_shown = (band(mask, pow(2, i)) ~= 0)
+      settings.counters[filter.name].is_shown = (band(mask, pow(2, i-1)) ~= 0)
     end
   end
 end

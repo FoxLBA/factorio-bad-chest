@@ -1,6 +1,7 @@
 local AreaScannerGUI = {}
 
 AreaScannerGUI.FILTER_NANES = {
+  blank = "blank",
   show_resources = "resources",
   show_environment = "trees_and_rocks",
   show_buildings = "buildings",
@@ -54,7 +55,7 @@ function AreaScannerGUI.create_scanner_gui(player, entity)
   AreaScannerGUI.add_input_setting_line(input_flow, "description.y-offset", "y")
   AreaScannerGUI.add_input_setting_line(input_flow, "gui-map-generator.map-width", "width")
   AreaScannerGUI.add_input_setting_line(input_flow, "gui-map-generator.map-height", "height")
-  AreaScannerGUI.add_input_setting_line(input_flow, "description.filter", "filter")
+  AreaScannerGUI.add_input_setting_line(input_flow, "description.filter", "filter", {"recursive-blueprints.filter-lable-tooltip"})
 
   -- Minimap
   local minimap_frame = main_flow.add{type = "frame", style = "entity_button_frame"}
@@ -163,12 +164,13 @@ function AreaScannerGUI.create_scanner_gui(player, entity)
   return gui
 end
 
-function AreaScannerGUI.add_input_setting_line(element, caption, name)
+function AreaScannerGUI.add_input_setting_line(element, caption, name, tooltip)
   local flow = element.add{type = "flow"}
   flow.style.vertical_align = "center"
   flow.add{
     type = "label",
-    caption = {"", {caption}, ":"}
+    caption = {"", {caption}, ":"},
+    tooltip = tooltip
   }
   flow.add{
     type = "sprite-button", style = "recursive-blueprints-slot",
@@ -312,17 +314,6 @@ function AreaScannerGUI.create_signal_gui(element)
       style = "heading_2_label",
       caption = {"recursive-blueprints.heading_label-filters"}
     }
-    for name, state in pairs(scanner.settings.filters) do
-      filters_flow.add{
-        type = "checkbox",
-        state = state,
-        caption = {"recursive-blueprints.counter-name-"..AreaScannerGUI.FILTER_NANES[name]},
-        tags = {
-          ["recursive-blueprints-filter-checkbox-field"] = name,
-          ["recursive-blueprints-filter-checkbox-type"] = "filters"
-        }
-      }
-    end
     --options_flow.add{type = "line", direction = "vertical"}
     local counters_flow = options_flow.add{type = "flow", direction = "vertical"}
     counters_flow.style.left_margin = 10
@@ -331,17 +322,35 @@ function AreaScannerGUI.create_signal_gui(element)
       style = "heading_2_label",
       caption = {"recursive-blueprints.heading_label-counters"}
     }
-    for name, counter in pairs(scanner.settings.counters) do
-      counters_flow.add{
-        type = "checkbox",
-        state = counter.is_shown,
-        caption = {"recursive-blueprints.counter-name-"..name},
-        tooltip = {"recursive-blueprints.counter-tooltip-"..name},
-        tags = {
-          ["recursive-blueprints-filter-checkbox-field"] = name,
-          ["recursive-blueprints-filter-checkbox-type"] = "counters"
+
+    for _, setting in pairs(AreaScanner.FILTER_MASK_ORDER) do
+      if setting.group == "filters" then
+        local name = setting.name
+        local tooltip = nil
+        if name == "blank" then tooltip = {"recursive-blueprints.counter-tooltip-blank"} end
+        filters_flow.add{
+          type = "checkbox",
+          state = scanner.settings.filters[name] or false,
+          caption = {"recursive-blueprints.counter-name-"..AreaScannerGUI.FILTER_NANES[name]},
+          tooltip = tooltip,
+          tags = {
+            ["recursive-blueprints-filter-checkbox-field"] = name,
+            ["recursive-blueprints-filter-checkbox-type"] = "filters"
+          }
         }
-      }
+      elseif setting.group == "counters" then
+        local name = setting.name
+        counters_flow.add{
+          type = "checkbox",
+          state = scanner.settings.counters[name].is_shown,
+          caption = {"recursive-blueprints.counter-name-"..name},
+          tooltip = {"recursive-blueprints.counter-tooltip-"..name},
+          tags = {
+            ["recursive-blueprints-filter-checkbox-field"] = name,
+            ["recursive-blueprints-filter-checkbox-type"] = "counters"
+          }
+        }
+      end
     end
 
     -- Text field
