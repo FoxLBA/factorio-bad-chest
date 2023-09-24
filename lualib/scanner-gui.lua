@@ -666,7 +666,7 @@ function AreaScannerGUI.update_scanner_gui(gui)
   }
   local largest = math.max(scan_area.width, scan_area.height)
   if largest == 0 then largest = 32 end
-  minimap.zoom = 256 / largest
+  minimap.zoom = 256 / largest * gui.gui.player.display_scale
   minimap.style.natural_width = scan_area.width / largest * 256
   minimap.style.natural_height = scan_area.height / largest * 256
 

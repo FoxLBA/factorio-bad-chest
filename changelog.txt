@@ -1,4 +1,11 @@
 ---------------------------------------------------------------------------------------------------
+Version: 1.3.12
+Date: 2023-09-24
+  Changes:
+    - Add blank filter checkbox to scanner filter GUI.
+  Bugfixes:
+    - The minimap in GUI of the scanner takes into account the scale of the interface.
+---------------------------------------------------------------------------------------------------
 Version: 1.3.11
 Date: 2023-05-03
   Changes:
