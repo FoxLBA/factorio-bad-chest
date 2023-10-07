@@ -159,6 +159,7 @@ function Deployer.signal_filtred_deconstruction(deployer, deconstruct, whitelist
   local func_name = "order_deconstruction"
   if not deconstruct then func_name = "cancel_deconstruction" end
   local list = {}
+  local list_tiles = {}
   local signal_t = false
   local signal_r = false
   local signal_c = false
@@ -173,6 +174,8 @@ function Deployer.signal_filtred_deconstruction(deployer, deconstruct, whitelist
           if i_prototype.curved_rail then
             table.insert(list, i_prototype.curved_rail.name)
           end
+        elseif i_prototype.place_as_tile_result then
+          table.insert(list_tiles, i_prototype.place_as_tile_result.result.name)
         end
       elseif s_name == "signal-T" then signal_t = true
       elseif s_name == "signal-R" then signal_r = true
@@ -183,11 +186,16 @@ function Deployer.signal_filtred_deconstruction(deployer, deconstruct, whitelist
   -- Apply a blacklist/whitelist.
   local list_empty = not (#list>0 or signal_t or signal_r or signal_c)
   if whitelist then
-    if list_empty then return end
+    if list_empty and #list_tiles==0 then return end
     for _, area in pairs(areas) do
       if #list>0 then
         for _, entity in pairs(surface.find_entities_filtered{name = list, force = force, area = area})do
           entity[func_name](force) --order or cancel deconstruction
+        end
+      end
+      if #list_tiles>0 then
+        for _, tile in pairs(surface.find_tiles_filtered{name = list_tiles, force = force, area = area}) do
+          tile[func_name](force)
         end
       end
       local types = {}
@@ -211,6 +219,8 @@ function Deployer.signal_filtred_deconstruction(deployer, deconstruct, whitelist
     end
     local blacklist = {}
     for _, name in pairs(list) do blacklist[name] = true end
+    --local blacklist_tiles = {}
+    --for _, name in pairs(list_tiles) do blacklist_tiles[name] = true end
     for _, area in pairs(areas) do
       if #list == 0 then
         for _, entity in pairs(surface.find_entities_filtered{force = force, area = area})do
@@ -221,6 +231,15 @@ function Deployer.signal_filtred_deconstruction(deployer, deconstruct, whitelist
           if not blacklist[entity.name] then entity[func_name](force) end
         end
       end
+      --[[if #list_tiles == 0 then
+        for _, tile in pairs(surface.find_tiles_filtered{force = force, area = area})do
+          tile[func_name](force)
+        end
+      else
+        for _, tile in pairs(surface.find_tiles_filtered{force = force, area = area})do
+          if not blacklist_tiles[tile.name] then tile[func_name](force) end
+        end
+      end]]
       local types = {}
       if not signal_t then table.insert(types, "tree") end
       if not signal_c then table.insert(types, "cliff") end

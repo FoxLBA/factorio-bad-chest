@@ -1,6 +1,8 @@
 ---------------------------------------------------------------------------------------------------
 Version: 1.3.13
 Date: ????
+  Changes:
+    - Deconstruction whitelist (deconstruction command -4 and -6) now can handle tiles.
   Bugfixes:
     - Added a missing routine for destroed deployers.
 ---------------------------------------------------------------------------------------------------
