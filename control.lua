@@ -110,11 +110,8 @@ local function on_built(event)
   -- Support automatic mode for trains
   if entity.train then
     RB_util.on_built_carriage(entity, event.tags)
-    return
-  end
-
-  if entity.name == "blueprint-deployer" then
-    global.deployers[entity.unit_number] = entity
+  elseif entity.name == "blueprint-deployer" then
+    Deployer.on_build(entity)
   elseif entity.name == "recursive-blueprints-scanner" then
     AreaScanner.on_built_scanner(entity, event)
   end
@@ -124,6 +121,7 @@ local function on_entity_destroyed(event)
   if not event.unit_number then return end
   RB_util.on_item_request(event.unit_number)
   AreaScanner.on_destroyed_scanner(event.unit_number)
+  Deployer.on_destroy(event.unit_number)
 end
 
 local function on_player_setup_blueprint(event)

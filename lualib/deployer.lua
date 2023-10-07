@@ -17,6 +17,18 @@ for i = 1, 5 do
     )
 end
 
+function Deployer.on_build(entity)
+  global.deployers[entity.unit_number] = entity
+  script.register_on_entity_destroyed(entity)
+end
+
+function Deployer.on_destroy(unit_number)
+  local deployer = global.deployers[unit_number]
+  if deployer then
+    global.deployers[unit_number] = nil
+  end
+end
+
 local function read_1_deploy_signal(get_signal)
   return get_signal(DEPLOY_SIGNAL)
 end
@@ -517,7 +529,7 @@ local function deployer_logging_func(msg_type, deployer, vars)
     return
   end
 
-  local msg = ""
+  local msg = {""}
   local deployer_gps = make_gps_string(deployer.position, deployer.surface)
 
   --"point_deploy" "area_deploy" "self_deconstruct" "destroy_book" "copy_book"
