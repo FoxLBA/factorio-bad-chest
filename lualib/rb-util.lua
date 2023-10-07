@@ -4,13 +4,15 @@ local RB_util = {}
 ---@param force LuaForce
 ---@param surface LuaSurface
 ---@param area BoundingBox
+---@return BoundingBox[] result
+---@return int32 counter
 function RB_util.find_charted_areas(force, surface, area)
   local x1 = area[1][1]
   local x2 = area[2][1]
   local y1 = area[1][2]
   local y2 = area[2][2]
 
-  local counter = 0
+  local counter = 0 --count of uncharted chunks.
   local area_lines = {}
   local floor = math.floor
   local insert = table.insert
@@ -21,7 +23,7 @@ function RB_util.find_charted_areas(force, surface, area)
   -- Find all charted chunks and combine then into groups of lines.
   for chunk_x = chuncks_area[1][1], chuncks_area[2][1] do
     local current_line = {}
-    local current_slice = nil
+    local top_chunk = nil
     local bottom_chunk = nil
     local left = chunk_x * 32
     local right = left + 32
@@ -29,33 +31,27 @@ function RB_util.find_charted_areas(force, surface, area)
     if right > x2 then right = x2 end
     for chunk_y = chuncks_area[1][2], chuncks_area[2][2] do
       if force.is_chunk_charted(surface, {chunk_x, chunk_y}) then
-        if not current_slice then
-          local top = chunk_y * 32
-          local bottom = top + 32
+        bottom_chunk = chunk_y
+        if not top_chunk then top_chunk = chunk_y end
+      else
+        if top_chunk then
+          local top = top_chunk * 32
+          local bottom = bottom_chunk * 32 + 32
           if top < y1 then top = y1 end
           if bottom > y2 then bottom = y2 end
-          current_slice = {{left, top}, {right, bottom}}
-        else
-          bottom_chunk = chunk_y
+          insert(current_line, {{left, top}, {right, bottom}})
+          top_chunk = nil
         end
-      else
-        if bottom_chunk then
-          local bottom = bottom_chunk * 32 + 32
-          if bottom > y2 then bottom = y2 end
-          current_slice[2][2] = bottom
-        end
-        if current_slice then insert(current_line, current_slice) end
-        current_slice = nil
-        bottom_chunk = nil
         counter = counter + 1
       end
     end
-    if bottom_chunk then
+    if top_chunk then
+      local top = top_chunk * 32
       local bottom = bottom_chunk * 32 + 32
+      if top < y1 then top = y1 end
       if bottom > y2 then bottom = y2 end
-      current_slice[2][2] = bottom
+      insert(current_line, {{left, top}, {right, bottom}})
     end
-    if current_slice then insert(current_line, current_slice) end
     insert(area_lines, current_line)
   end
   if counter == 0 then return {area}, 0 end
