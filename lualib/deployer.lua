@@ -373,10 +373,12 @@ function Deployer.get_area(deployer)
   H = H - 0.0078125
 
   local position = deployer.position
-  return {
+  local area = {
     {position.x + X - W/2, position.y + Y - H/2},
     {position.x + X + W/2, position.y + Y + H/2}
   }
+  RB_util.area_check_limits(area)
+  return area
 end
 
 function Deployer.get_area_signals(deployer)
@@ -394,10 +396,10 @@ function Deployer.get_target_position(deployer)
   }
 
   -- Check for building out of bounds
-  if position.x > 1000000
-  or position.x < -1000000
-  or position.y > 1000000
-  or position.y < -1000000 then
+  if position.x > 8000000
+  or position.x < -8000000
+  or position.y > 8000000
+  or position.y < -8000000 then
     return
   end
   return position

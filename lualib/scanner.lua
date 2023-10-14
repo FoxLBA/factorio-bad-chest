@@ -308,26 +308,7 @@ function AreaScanner.scan_resources(scanner)
   local force = scanner.entity.force
   local surface = scanner.entity.surface
   local scan_area_settings = scanner.current
-  local x = scan_area_settings.x
-  local y = scan_area_settings.y
-  local w = scan_area_settings.width
-  local h = scan_area_settings.height
-  local p = scanner.entity.position
-  local scan_area
-  if settings.global["recursive-blueprints-area"].value == "corner" then
-    scan_area = {
-      {p.x + x, p.y + y},
-      {p.x + x + w, p.y + y + h}
-    }
-  else
-    -- Align to grid
-    if w % 2 ~= 0 then x = x + 0.5 end
-    if h % 2 ~= 0 then y = y + 0.5 end
-    scan_area = {
-      {p.x + x - w/2, p.y + y - h/2},
-      {p.x + x + w/2, p.y + y + h/2}
-    }
-  end
+  local scan_area = AreaScanner.get_scan_area(scanner.entity.position, scan_area_settings)
 
   local areas, uncharted = RB_util.find_charted_areas(force, surface, scan_area)
   local scans -- See the description of AreaScanner.scan_area
@@ -552,7 +533,9 @@ function AreaScanner.scan_area(surface, areas, scanner_force, filter)
           blacklist[hash] = true
         end
       end
-      for _, entity in pairs(surface.find_entities_filtered{area = area, force = scanner_force, name = "tile-ghost"}) do
+      local a = table.deepcopy(area)
+      RB_util.area_shrink_1_pixel(a)
+      for _, entity in pairs(surface.find_entities_filtered{area = a, force = scanner_force, name = "tile-ghost"}) do
         local ghost_name = entity.ghost_name
         ghost_tiles[ghost_name] = (ghost_tiles[ghost_name] or 0) + 1
       end
@@ -680,7 +663,9 @@ function AreaScanner.scan_area_no_hash(surface, area, scanner_force, filter)
       local ghost_name = entity.ghost_name
       ghosts[ghost_name] = (ghosts[ghost_name] or 0) + 1
     end
-    for _, entity in pairs(surface.find_entities_filtered{area = area, force = scanner_force, name = "tile-ghost"}) do
+    local a = table.deepcopy(area)
+    RB_util.area_shrink_1_pixel(a)
+    for _, entity in pairs(surface.find_entities_filtered{area = a, force = scanner_force, name = "tile-ghost"}) do
       local ghost_name = entity.ghost_name
       ghost_tiles[ghost_name] = (ghost_tiles[ghost_name] or 0) + 1
     end
@@ -721,8 +706,8 @@ function AreaScanner.sanitize_area(key, value)
     if value < 0 then value = 0 end
     if value > 999 then value = 999 end
   elseif key ~= "filter" then
-    if value > 2000000 then value = 2000000 end
-    if value < -2000000 then value = -2000000 end
+    if value > 8388600 then value = 8388600 end
+    if value < -8388600 then value = -8388600 end
   end
   return value
 end
@@ -785,6 +770,35 @@ function AreaScanner.toggle_default_settings()
   else
     AreaScanner.DEFAULT_SCANNER_SETTINGS = NEW_SCANNER_SETTINGS
   end
+end
+
+---Calculate the scanning area based on the position and settings of the scanner.
+---@param scaner_position MapPosition
+---@param area_settings table
+---@return BoundingBox
+function AreaScanner.get_scan_area(scaner_position, area_settings)
+  local x = area_settings.x
+  local y = area_settings.y
+  local w = area_settings.width
+  local h = area_settings.height
+  local area
+  if settings.global["recursive-blueprints-area"].value == "corner" then
+    area = {
+      {scaner_position.x + x, scaner_position.y + y},
+      {scaner_position.x + x + w, scaner_position.y + y + h}
+    }
+  else
+    -- Align to grid
+    if w % 2 ~= 0 then x = x + 0.5 end
+    if h % 2 ~= 0 then y = y + 0.5 end
+    area = {
+      {scaner_position.x + x - w/2, scaner_position.y + y - h/2},
+      {scaner_position.x + x + w/2, scaner_position.y + y + h/2}
+    }
+  end
+  RB_util.area_normalize(area)
+  RB_util.area_check_limits(area)
+  return area
 end
 
 return AreaScanner

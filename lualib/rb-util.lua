@@ -1,6 +1,6 @@
 local RB_util = {}
 
----Find charted areas for given force and surface
+---Find charted areas for given force and surface.
 ---@param force LuaForce
 ---@param surface LuaSurface
 ---@param area BoundingBox
@@ -77,6 +77,50 @@ function RB_util.find_charted_areas(force, surface, area)
     end
   end
   return result, counter
+end
+
+---Subtract 1 pixel from the edges to avoid tile overlap.
+---@param a BoundingBox
+---@return BoundingBox
+function RB_util.area_shrink_1_pixel(a)
+  local pixel = 0.00390625 -- 1/256
+  a[1][1] = a[1][1] + pixel
+  a[1][2] = a[1][2] + pixel
+  a[2][1] = a[2][1] - pixel
+  a[2][2] = a[2][2] - pixel
+  return a
+end
+
+---Check the limits of the coordinates and reduce the size of BoundingBox if necessary.
+---@param a BoundingBox
+---@return BoundingBox
+function RB_util.area_check_limits(a)
+  local limit = 8388600 -- ~2^23
+  if a[1][1] > limit  then a[1][1] = limit  end
+  if a[1][1] < -limit then a[1][1] = -limit end
+  if a[1][2] > limit  then a[1][2] = limit  end
+  if a[1][2] < -limit then a[1][2] = -limit end
+  if a[2][1] > limit  then a[2][1] = limit  end
+  if a[2][1] < -limit then a[2][1] = -limit end
+  if a[2][2] > limit  then a[2][2] = limit  end
+  if a[2][2] < -limit then a[2][2] = -limit end
+  return a
+end
+
+---Calculate the center of the BoundingBox.
+---@param a BoundingBox
+---@return MapPosition, MapPosition
+function RB_util.area_find_center_and_size(a)
+  local s =  {a[2][1] - a[1][1], a[2][2] - a[1][2]}
+  return {a[1][1] + s[1]/2, a[1][2] + s[2]/2}, s
+end
+
+---@param a BoundingBox
+---@return BoundingBox
+function RB_util.area_normalize(a)
+  if a[1][1] > a[2][1] then a[1][1], a[2][1] = a[2][1], a[1][1] end
+  if a[1][2] > a[2][2] then a[1][2], a[2][2] = a[2][2], a[1][2] end
+  return a
 end
 
 function RB_util.enable_automatic_mode(train)

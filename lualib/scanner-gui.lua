@@ -639,36 +639,26 @@ function AreaScannerGUI.update_scanner_gui(gui)
   local scanner = global.scanners[gui.tags["recursive-blueprints-id"]]
   if not scanner then return end
   if not scanner.entity.valid then return end
-  local scan_area = scanner.current
 
   -- Update area dimensions
+  local scan_area = scanner.settings.scan_area
   local input_flow = gui.children[1].children[2].children[2].children[1].children[2]
-  GUI_util.set_slot_button(input_flow.children[1].children[2], scanner.settings.scan_area.x)
-  GUI_util.set_slot_button(input_flow.children[2].children[2], scanner.settings.scan_area.y)
-  GUI_util.set_slot_button(input_flow.children[3].children[2], scanner.settings.scan_area.width)
-  GUI_util.set_slot_button(input_flow.children[4].children[2], scanner.settings.scan_area.height)
-  GUI_util.set_slot_button(input_flow.children[5].children[2], scanner.settings.scan_area.filter)
+  GUI_util.set_slot_button(input_flow.children[1].children[2], scan_area.x)
+  GUI_util.set_slot_button(input_flow.children[2].children[2], scan_area.y)
+  GUI_util.set_slot_button(input_flow.children[3].children[2], scan_area.width)
+  GUI_util.set_slot_button(input_flow.children[4].children[2], scan_area.height)
+  GUI_util.set_slot_button(input_flow.children[5].children[2], scan_area.filter)
 
   -- Update minimap
-  local x = scan_area.x
-  local y = scan_area.y
-  if scan_area.width % 2 ~= 0 then x = x + 0.5 end -- Align to grid
-  if scan_area.height % 2 ~= 0 then y = y + 0.5 end
-  if settings.global["recursive-blueprints-area"].value == "corner" then
-    -- Convert from top left corner to center
-    x = x + math.floor(scan_area.width/2)
-    y = y + math.floor(scan_area.height/2)
-  end
+  scan_area = scanner.current
+  local c, s = RB_util.area_find_center_and_size(AreaScanner.get_scan_area(scanner.entity.position, scan_area))
   local minimap = gui.children[1].children[2].children[2].children[2].children[1]
-  minimap.position = {
-    scanner.entity.position.x + x,
-    scanner.entity.position.y + y
-  }
-  local largest = math.max(scan_area.width, scan_area.height)
+  minimap.position = c
+  local largest = math.max(s[1], s[2])
   if largest == 0 then largest = 32 end
   minimap.zoom = 256 / largest * gui.gui.player.display_scale
-  minimap.style.natural_width = scan_area.width / largest * 256
-  minimap.style.natural_height = scan_area.height / largest * 256
+  minimap.style.natural_width = s[1] / largest * 256
+  minimap.style.natural_height = s[2] / largest * 256
 
   AreaScannerGUI.update_scanner_output(gui.children[1].children[2].children[5].children[1], scanner.entity)
 
