@@ -135,7 +135,7 @@ local function on_player_setup_blueprint(event)
     bp = global.blueprints[event.player_index]
   end
 
-  if bp and bp.is_blueprint_setup() then
+  if bp and bp.is_blueprint() and bp.is_blueprint_setup() then
     local mapping = event.mapping.get()
     local blueprint_entities = bp.get_blueprint_entities()
     local found = false
@@ -276,6 +276,7 @@ end
 -- Global events
 script.on_init(on_init)
 script.on_configuration_changed(on_mods_changed)
+---@diagnostic disable: param-type-mismatch
 script.on_event(defines.events.on_tick, on_tick)
 script.on_event(defines.events.on_gui_opened, on_gui_opened)
 script.on_event(defines.events.on_gui_closed, on_gui_closed)

@@ -176,7 +176,7 @@ function GUI_util.cache_signals()
         end
         -- Fluid signals
         local fluids = game.get_filtered_fluid_prototypes{
-          {filter = "subgroup", subgroup = subgroup.name},
+          {filter = "subgroup", subgroup = subgroup.name}, ---@diagnostic disable-next-line: missing-fields
           {filter = "hidden", invert = true, mode = "and"},
         }
         for _, fluid in pairs(fluids) do
@@ -228,7 +228,7 @@ function GUI_util.add_signal_select_frame(element, selected_signal)
   --local matching_button = nil
 
   -- Signals are stored in a tabbed pane
-  local tabbed_pane = inner_frame.add{
+  local tabbed_pane = inner_frame.add{ ---@type LuaGuiElement
     type = "tabbed-pane",
     style = "recursive-blueprints-tabbed-pane",
   }
