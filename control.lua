@@ -135,7 +135,7 @@ local function on_player_setup_blueprint(event)
     bp = global.blueprints[event.player_index]
   end
 
-  if bp and bp.is_blueprint() and bp.is_blueprint_setup() then
+  if bp and bp.is_blueprint and bp.is_blueprint_setup() then
     local mapping = event.mapping.get()
     local blueprint_entities = bp.get_blueprint_entities()
     local found = false
