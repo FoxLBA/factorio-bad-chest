@@ -154,9 +154,9 @@ end
 
 function RB_util.on_built_carriage(entity, tags)
   -- Check for automatic mode tag
-  if tags and tags.manual_mode ~= nil and tags.manual_mode == false then
+  if tags and tags.automatic_mode ~= nil and tags.automatic_mode == true then
     -- Wait for the entire train to be built
-    if tags.train_length == #entity.train.carriages then
+    if tags.length == #entity.train.carriages then
       -- Turn on automatic mode
       RB_util.enable_automatic_mode(entity.train)
     end
