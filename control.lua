@@ -138,27 +138,13 @@ local function on_player_setup_blueprint(event)
   if bp and bp.is_blueprint and bp.is_blueprint_setup() then
     local mapping = event.mapping.get()
     local blueprint_entities = bp.get_blueprint_entities()
-    local found = false
-    if blueprint_entities then
-      for _, bp_entity in pairs(blueprint_entities) do
-        local entity = mapping[bp_entity.entity_number]
-        if entity and entity.train and not entity.train.manual_mode then
-          --Add train tags for automatic mode
-          found = true
-          if not bp_entity.tags then bp_entity.tags = {} end
-          bp_entity.tags.automatic_mode = true
-          bp_entity.tags.length = #entity.train.carriages
-
-        elseif bp_entity.name == "recursive-blueprints-scanner" then
-          found = true
-          bp_entity.control_behavior = nil
-          if entity then
-            bp_entity.tags = AreaScanner.serialize(entity)
-          end
-        end
-      end
-      if found then
-        bp.set_blueprint_entities(blueprint_entities)
+    for index, entity in pairs(mapping) do
+      if entity and entity.train and not entity.train.manual_mode then
+        --Add train tags for automatic mode
+        bp.set_blueprint_entity_tag(index, "automatic_mode", true)
+        bp.set_blueprint_entity_tag(index, "length", #entity.train.carriages)
+      elseif entity.name == "recursive-blueprints-scanner" and entity then
+        bp.set_blueprint_entity_tags(index, AreaScanner.serialize(entity))
       end
     end
   end
