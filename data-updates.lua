@@ -1,3 +1,4 @@
+if true then return end
 -- Count the number of resources we will scan
 local resources = {item = {}, fluid = {}}
 local add_scanner_resource = function(entity)

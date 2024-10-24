@@ -11,11 +11,11 @@ AreaScannerGUI.FILTER_NANES = {
 
 -- Build the scanner gui
 function AreaScannerGUI.create_scanner_gui(player, entity)
-  local scanner = global.scanners[entity.unit_number]
+  local scanner = storage.scanners[entity.unit_number]
   if not scanner then
     player.force.print('AreaScannerGUI.create_scanner_gui scanner data not found. Generating default settings.')
     AreaScanner.on_built_scanner(entity, {})
-    scanner = global.scanners[entity.unit_number]
+    scanner = storage.scanners[entity.unit_number]
   end
 
   -- Destroy any old versions
@@ -205,7 +205,7 @@ function AreaScannerGUI.create_signal_gui(element)
   local screen = element.gui.screen
   local primary_gui = screen["recursive-blueprints-scanner"]
   local id = primary_gui.tags["recursive-blueprints-id"]
-  local scanner = global.scanners[id]
+  local scanner = storage.scanners[id]
   local field = element.tags.name
   local field_type = element.tags.type
 
@@ -410,7 +410,7 @@ function AreaScannerGUI.set_scanner_value(element)
   local screen = element.gui.screen
   local scanner_gui = screen["recursive-blueprints-scanner"]
   if not scanner_gui then return end
-  local scanner = global.scanners[scanner_gui.tags["recursive-blueprints-id"]]
+  local scanner = storage.scanners[scanner_gui.tags["recursive-blueprints-id"]]
   local signal_gui = screen["recursive-blueprints-signal"]
   local key = signal_gui.tags["recursive-blueprints-field"]
   if signal_gui.tags["recursive-blueprints-type"] ~= "input" then return end
@@ -445,7 +445,7 @@ function AreaScannerGUI.set_scanner_signal(element)
   local signal_gui = screen["recursive-blueprints-signal"]
   local scanner_gui = screen["recursive-blueprints-scanner"]
   if not scanner_gui then return end
-  local scanner = global.scanners[scanner_gui.tags["recursive-blueprints-id"]]
+  local scanner = storage.scanners[scanner_gui.tags["recursive-blueprints-id"]]
   local key = signal_gui.tags["recursive-blueprints-field"]
   local key_type = signal_gui.tags["recursive-blueprints-type"]
 
@@ -583,7 +583,7 @@ function AreaScannerGUI.counter_checkbox_change(element)
   local screen = element.gui.screen
   local scanner_gui = screen["recursive-blueprints-scanner"]
   if not scanner_gui then return end
-  local scanner = global.scanners[scanner_gui.tags["recursive-blueprints-id"]]
+  local scanner = storage.scanners[scanner_gui.tags["recursive-blueprints-id"]]
   local key = element.parent.children[2].tags.name
   scanner.settings.counters[key].is_negative = element.state
   AreaScanner.scan_resources(scanner)
@@ -597,7 +597,7 @@ end
 
 function AreaScannerGUI.reset_counter_settings(element)
   local scanner_gui = GUI_util.get_root_element(element)
-  local scanner = global.scanners[scanner_gui.tags["recursive-blueprints-id"]]
+  local scanner = storage.scanners[scanner_gui.tags["recursive-blueprints-id"]]
   for name, counter in pairs(AreaScanner.DEFAULT_SCANNER_SETTINGS.counters) do
     scanner.settings.counters[name].is_negative = counter.is_negative
     scanner.settings.counters[name].signal = {type = counter.signal.type, name = counter.signal.name}
@@ -636,7 +636,7 @@ end
 
 -- Populate gui with the latest data
 function AreaScannerGUI.update_scanner_gui(gui)
-  local scanner = global.scanners[gui.tags["recursive-blueprints-id"]]
+  local scanner = storage.scanners[gui.tags["recursive-blueprints-id"]]
   if not scanner then return end
   if not scanner.entity.valid then return end
 

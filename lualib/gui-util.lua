@@ -126,11 +126,11 @@ end
 
 function GUI_util.get_signal_sprite(signal)
   if not signal.name then return end
-  if signal.type == "item" and game.item_prototypes[signal.name] then
+  if signal.type == "item" and prototypes.item[signal.name] then
     return "item/" .. signal.name
-  elseif signal.type == "fluid" and game.fluid_prototypes[signal.name] then
+  elseif signal.type == "fluid" and prototypes.fluid[signal.name] then
     return "fluid/" .. signal.name
-  elseif signal.type == "virtual" and game.virtual_signal_prototypes[signal.name] then
+  elseif signal.type == "virtual" and prototypes.virtual_signal[signal.name] then
     return "virtual-signal/" .. signal.name
   end
 end
@@ -158,16 +158,16 @@ end
 -- Sort them by group and subgroup.
 function GUI_util.cache_signals()
   local gui_groups = {}
-  for _, group in pairs(game.item_group_prototypes) do
+  for _, group in pairs(prototypes.item_group) do
     for _, subgroup in pairs(group.subgroups) do
       if subgroup.name == "other" or subgroup.name == "virtual-signal-special" then
         -- Hide special signals
       else
         local signals = {}
         -- Item signals
-        local items = game.get_filtered_item_prototypes{
+        local items = prototypes.get_item_filtered{
           {filter = "subgroup", subgroup = subgroup.name},
-          {filter = "flag", flag = "hidden", invert = true, mode = "and"},
+          {filter = "hidden", invert = true, mode = "and"},
         }
         for _, item in pairs(items) do
           if item.subgroup == subgroup then
@@ -175,7 +175,7 @@ function GUI_util.cache_signals()
           end
         end
         -- Fluid signals
-        local fluids = game.get_filtered_fluid_prototypes{
+        local fluids = prototypes.get_fluid_filtered{
           {filter = "subgroup", subgroup = subgroup.name}, ---@diagnostic disable-next-line: missing-fields
           {filter = "hidden", invert = true, mode = "and"},
         }
@@ -185,7 +185,7 @@ function GUI_util.cache_signals()
           end
         end
         -- Virtual signals
-        for _, signal in pairs(game.virtual_signal_prototypes) do
+        for _, signal in pairs(prototypes.virtual_signal) do
           if signal.subgroup == subgroup then
             table.insert(signals, {type = "virtual", name = signal.name})
           end
@@ -200,7 +200,7 @@ function GUI_util.cache_signals()
       end
     end
   end
-  global.gui_util_groups = gui_groups
+  storage.gui_util_groups = gui_groups
 end
 
 ---Adds tabs frame with signals for selection.
@@ -222,8 +222,8 @@ function GUI_util.add_signal_select_frame(element, selected_signal)
 
   -- Open the signals tab if nothing is selected
   local selected_tab = 1
-  for i = 1, #global.gui_util_groups do
-    if global.gui_util_groups[i].name == "signals" then selected_tab = i end
+  for i = 1, #storage.gui_util_groups do
+    if storage.gui_util_groups[i].name == "signals" then selected_tab = i end
   end
   --local matching_button = nil
 
@@ -233,7 +233,7 @@ function GUI_util.add_signal_select_frame(element, selected_signal)
     style = "recursive-blueprints-tabbed-pane",
   }
   tabbed_pane.style.bottom_margin = 4
-  for g, group in pairs(global.gui_util_groups) do
+  for g, group in pairs(storage.gui_util_groups) do
     -- We can't display images in tabbed-pane tabs,
     -- so make them invisible and use fake image tabs instead.
     local tab = tabbed_pane.add{
@@ -300,11 +300,11 @@ function GUI_util.add_signal_select_frame(element, selected_signal)
     column_count = 6,
   }
   tab_bar.style.width = 420
-  for i = 1, #global.gui_util_groups do GUI_util.add_tab_button(tab_bar, i, selected_tab) end
-  if #global.gui_util_groups <= 1 then
+  for i = 1, #storage.gui_util_groups do GUI_util.add_tab_button(tab_bar, i, selected_tab) end
+  if #storage.gui_util_groups <= 1 then
     -- No tab bar
     tab_scroll_pane.style.maximal_height = 0
-  elseif #global.gui_util_groups <= 6 then
+  elseif #storage.gui_util_groups <= 6 then
     -- Single row tab bar
     tab_scroll_pane.style.maximal_height = 64
   else
@@ -316,7 +316,7 @@ end
 
 function GUI_util.highlight_tab_button(button, index)
   local column = index % 6
-  if #global.gui_util_groups > 6 then
+  if #storage.gui_util_groups > 6 then
     button.style = "recursive-blueprints-tab-button-selected-grid"
   elseif column == 1 then
     button.style = "recursive-blueprints-tab-button-left"
@@ -329,14 +329,14 @@ end
 
 -- Add tab button for signal select frame.
 function GUI_util.add_tab_button(row, i, selected)
-  local name = global.gui_util_groups[i].name
+  local name = storage.gui_util_groups[i].name
   local button = row.add{
     type = "sprite-button",
     style = "recursive-blueprints-tab-button",
     tooltip = {"item-group-name." .. name},
     tags = {["recursive-blueprints-tab-index"] = i},
   }
-  if #global.gui_util_groups > 6 then
+  if #storage.gui_util_groups > 6 then
     button.style = "filter_group_button_tab"
   end
   if game.is_valid_sprite_path("item-group/" .. name) then
@@ -359,7 +359,7 @@ function GUI_util.select_tab_by_index(element, index)
   local tab_bar = element.parent
   -- Un-highlight old tab button
   for i = 1, #tab_bar.children do
-    if #global.gui_util_groups > 6 then
+    if #storage.gui_util_groups > 6 then
       tab_bar.children[i].style = "filter_group_button_tab"
     else
       tab_bar.children[i].style = "recursive-blueprints-tab-button"

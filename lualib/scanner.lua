@@ -74,6 +74,9 @@ local NEW_SCANNER_SETTINGS = {
   }
 }
 
+local circuit_red = defines.wire_connector_id.circuit_red
+local circuit_green = defines.wire_connector_id.circuit_green
+
 AreaScanner.DEFAULT_SCANNER_SETTINGS = NEW_SCANNER_SETTINGS
 
 AreaScanner.FILTER_MASK_ORDER = {
@@ -103,10 +106,10 @@ function AreaScanner.on_tick_scanner(scanner)
   local changed = false
   if previous then
     local current  = scanner.current
-    local get_signal = scanner.entity.get_merged_signal
+    local get_signal = scanner.entity.get_signal
     for name, param in pairs(scanner.settings.scan_area) do
       local value = param
-      if type(param) == "table" then value = get_signal(param) end
+      if type(param) == "table" then value = get_signal(param, circuit_red, circuit_green) end
       if value ~= previous[name] then
         previous[name] = value
         current[name]  = AreaScanner.sanitize_area(name, value)
@@ -138,16 +141,16 @@ function AreaScanner.on_built_scanner(entity, event)
   if event.source and event.source.valid then
     -- Copy settings from clone
     tags = {}
-    tags.settings = util.table.deepcopy(global.scanners[event.source.unit_number].settings)
+    tags.settings = util.table.deepcopy(storage.scanners[event.source.unit_number].settings)
   end
   local scanner = AreaScanner.deserialize(entity, tags)
-  script.register_on_entity_destroyed(entity)
+  script.register_on_object_destroyed(entity)
   AreaScanner.make_previous(scanner)
   AreaScanner.scan_resources(scanner)
 end
 
 function AreaScanner.serialize(entity)
-  local scanner = global.scanners[entity.unit_number]
+  local scanner = storage.scanners[entity.unit_number]
   if scanner then
     local tags = {}
     tags.settings = util.table.deepcopy(scanner.settings)
@@ -185,7 +188,7 @@ function AreaScanner.deserialize(entity, tags)
   AreaScanner.mark_unknown_signals(scanner.settings)
   AreaScanner.check_input_signals(scanner)
   scanner.entity = entity
-  global.scanners[entity.unit_number] = scanner
+  storage.scanners[entity.unit_number] = scanner
   return scanner
 end
 
@@ -213,10 +216,10 @@ function AreaScanner.make_previous(scanner)
     local entity = scanner.entity
     local previous = {x = 0, y = 0, width = 0, height = 0, filter = 0}
     local current  = {x = 0, y = 0, width = 0, height = 0, filter = 0}
-    local get_signal = entity.get_merged_signal
+    local get_signal = entity.get_signal
     for name, param in pairs(a) do
       local value = param
-      if type(param) == "table" then value = get_signal(param) end
+      if type(param) == "table" then value = get_signal(param, circuit_red, circuit_green) end
       if name == "filter" then
         if type(param) == "table" then
           AreaScanner.set_filter_mask(scanner.settings, value)
@@ -235,9 +238,9 @@ function AreaScanner.make_previous(scanner)
 end
 
 function AreaScanner.on_destroyed_scanner(unit_number)
-  local scanner = global.scanners[unit_number]
+  local scanner = storage.scanners[unit_number]
   if scanner then
-    global.scanners[unit_number] = nil
+    storage.scanners[unit_number] = nil
     for _, player in pairs(game.players) do
       -- Remove scanner gui
       if player.opened
@@ -332,12 +335,12 @@ function AreaScanner.scan_resources(scanner)
 
   local result1 = {item = {}, fluid = {}, virtual = {}} -- counters, ore, trees, rocks, fish
   local result2 = {item = {}, fluid = {}, virtual = {}} -- buildings, ghosts, items on ground
-  if filters.show_resources then count_mineable(game.entity_prototypes, scans.resources, result1, true) end
-  scans.counters.trees_and_rocks = count_mineable(game.entity_prototypes, scans.environment, result1, filters.show_environment)
+  if filters.show_resources then count_mineable(prototypes.entity, scans.resources, result1, true) end
+  scans.counters.trees_and_rocks = count_mineable(prototypes.entity, scans.environment, result1, filters.show_environment)
   if filters.show_items_on_ground then result2.item = scans.items_on_ground end
-  scans.counters.buildings = count_placeable(game.entity_prototypes, scans.buildings, result2, filters.show_buildings)
-  scans.counters.ghosts = count_placeable(game.entity_prototypes, scans.ghosts, result2, filters.show_ghosts)
-                        + count_placeable(game.tile_prototypes, scans.ghost_tiles, result2, filters.show_ghosts)
+  scans.counters.buildings = count_placeable(prototypes.entity, scans.buildings, result2, filters.show_buildings)
+  scans.counters.ghosts = count_placeable(prototypes.entity, scans.ghosts, result2, filters.show_ghosts)
+                        + count_placeable(prototypes.tile, scans.ghost_tiles, result2, filters.show_ghosts)
 
   -- Copy resources to combinator output
   local behavior = scanner.entity.get_control_behavior()
@@ -451,8 +454,8 @@ end
 ]]
 function AreaScanner.scan_area(surface, areas, scanner_force, filter)
   local band = bit32.band
-  local ROCKS = global.rocks_names2
-  local INFINITE_RESOURCES = global.infinite_resources
+  local ROCKS = storage.rocks_names2
+  local INFINITE_RESOURCES = storage.infinite_resources
   local resources = {}
   local environment = {}
   local buildings = {}
@@ -617,8 +620,8 @@ end
 -- Almost a complete copy of "AreaScanner.scan_area()"
 function AreaScanner.scan_area_no_hash(surface, area, scanner_force, filter)
   local band = bit32.band
-  local ROCKS = global.rocks_names2
-  local INFINITE_RESOURCES = global.infinite_resources
+  local ROCKS = storage.rocks_names2
+  local INFINITE_RESOURCES = storage.infinite_resources
   local resources = {}
   local environment = {}
   local buildings = {}
@@ -756,12 +759,12 @@ end
 function AreaScanner.cache_infinite_resources()
   local resources={}
   local filter = {{filter = "type", type = "resource"}}
-  for name, e_prototype in pairs(game.get_filtered_entity_prototypes(filter)) do
+  for name, e_prototype in pairs(prototypes.get_entity_filtered(filter)) do
     if e_prototype.infinite_resource  then
       resources[name] = true
     end
   end
-  global.infinite_resources = resources
+  storage.infinite_resources = resources
 end
 
 function AreaScanner.toggle_default_settings()

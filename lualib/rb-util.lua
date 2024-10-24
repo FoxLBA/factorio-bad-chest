@@ -123,68 +123,28 @@ function RB_util.area_normalize(a)
   return a
 end
 
-function RB_util.enable_automatic_mode(train)
-  -- Train is already driving
-  if train.speed ~= 0 then return end
-  if not train.manual_mode then return end
-
-  -- Train is marked for deconstruction
-  for _, carriage in pairs(train.carriages) do
-    if carriage.to_be_deconstructed(carriage.force) then return end
-  end
-
-  -- Train is waiting for fuel
-  for _, carriage in pairs(train.carriages) do
-    local requests = carriage.surface.find_entities_filtered{
-      type = "item-request-proxy",
-      position = carriage.position,
-    }
-    for _, request in pairs(requests) do
-      if request.proxy_target == carriage then
-        global.fuel_requests[request.unit_number] = carriage
-        script.register_on_entity_destroyed(request)
-        return
-      end
-    end
-  end
-
-  -- Turn on automatic mode
-  train.manual_mode = false
-end
-
-function RB_util.on_built_carriage(entity, tags)
-  -- Check for automatic mode tag
-  if tags and tags.manual_mode ~= nil and tags.manual_mode == false then
-    -- Wait for the entire train to be built
-    if tags.train_length == #entity.train.carriages then
-      -- Turn on automatic mode
-      RB_util.enable_automatic_mode(entity.train)
-    end
-  end
-end
-
--- Train fuel item-request-proxy has been completed
-function RB_util.on_item_request(unit_number)
-  local carriage = global.fuel_requests[unit_number]
-  if not carriage then return end
-  global.fuel_requests[unit_number] = nil
-  if carriage.valid and carriage.train then
-    -- Done waiting for fuel, we can turn on automatic mode now
-    RB_util.enable_automatic_mode(carriage.train)
-  end
-end
-
 function RB_util.cache_rocks_names()
   local rocks={}
   local rocks2={}
-  for name, e_prototype in pairs(game.entity_prototypes) do
+  for name, e_prototype in pairs(prototypes.entity) do
     if e_prototype.count_as_rock_for_filtered_deconstruction  then
       rocks[name] = true
       table.insert(rocks2, name)
     end
   end
-  global.rocks_names = rocks
-  global.rocks_names2 = rocks2
+  storage.rocks_names = rocks
+  storage.rocks_names2 = rocks2
+end
+
+function RB_util.warning_msgs(msg_i)
+  if (msg_i < 0) or (msg_i > 1) then return end
+  if not storage.arning_msg then storage.arning_msg = {} end
+  if (not storage.arning_msg[msg_i]) or (storage.arning_msg[msg_i] < (game.tick)) then
+    storage.arning_msg[msg_i] = game.tick + 10*60*60 --10min
+    if msg_i == 1 then
+      game.print("Deployer automatic deconstruction is disabled due to the possibility of the game crash./nWaiting for fix. Latest checked version of Factorio 2.0.10")
+    end
+  end
 end
 
 -->>DEPRICATET FUNCTIONS>>--

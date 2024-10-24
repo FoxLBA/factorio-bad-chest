@@ -2,23 +2,23 @@ data:extend{
   {
     type = "recipe",
     name = "blueprint-deployer",
-    result = "blueprint-deployer",
+    results = {{type="item", name="blueprint-deployer", amount=1}},
     enabled = false,
     ingredients = {
-      {"steel-chest", 1},
-      {"electronic-circuit", 3},
-      {"advanced-circuit", 1},
+      {type="item", name="steel-chest", amount=1},
+      {type="item", name="electronic-circuit", amount=3},
+      {type="item", name="advanced-circuit", amount=1},
     },
   },
   {
     type = "recipe",
     name = "recursive-blueprints-scanner",
-    result = "recursive-blueprints-scanner",
+    results = {{type="item", name="recursive-blueprints-scanner", amount=1}},
     enabled = false,
     ingredients = {
-      {"electronic-circuit", 5},
-      {"iron-gear-wheel", 5},
-      {"iron-plate", 10},
+      {type="item", name="electronic-circuit", amount=5},
+      {type="item", name="iron-gear-wheel", amount=5},
+      {type="item", name="iron-plate", amount=10},
     },
   },
 }

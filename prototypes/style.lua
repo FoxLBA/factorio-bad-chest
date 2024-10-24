@@ -68,9 +68,9 @@ local tabbed_pane = {
     left_padding = 10,
     right_padding = 10,
     top_margin = 2,
-    graphical_set = {
-      base = table.deepcopy(data.raw["gui-style"]["default"]["filter_tabbed_pane"].tab_content_frame.graphical_set.base.center)
-    },
+    --graphical_set = {
+    --  base = table.deepcopy(data.raw["gui-style"]["default"]["filter_tabbed_pane"].tab_content_frame.graphical_set.base.center)
+    --},
   },
 }
 data.raw["gui-style"]["default"]["recursive-blueprints-tabbed-pane"] = tabbed_pane
@@ -131,10 +131,10 @@ tab_button_right.clicked_graphical_set = group_tab.right_edge_selected_graphical
 data.raw["gui-style"]["default"]["recursive-blueprints-tab-button-right"] = tab_button_right
 
 -- Grid tab button (selected)
-local grid_selected = table.deepcopy(data.raw["gui-style"]["default"]["filter_group_button_tab"].selected_graphical_set)
+local grid_selected = table.deepcopy(data.raw["gui-style"]["default"]["filter_group_button_tab_slightly_larger"].selected_graphical_set)
 data.raw["gui-style"]["default"]["recursive-blueprints-tab-button-selected-grid"] = {
   type = "button_style",
-  parent = "filter_group_button_tab",
+  parent = "filter_group_button_tab_slightly_larger",
   default_graphical_set = grid_selected,
   hovered_graphical_set = grid_selected,
   clicked_graphical_set = grid_selected,

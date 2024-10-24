@@ -1,5 +1,7 @@
 local Deployer = {}
 
+local circuit_red = defines.wire_connector_id.circuit_red
+local circuit_green = defines.wire_connector_id.circuit_green
 -- Command signals
 local DEPLOY_SIGNAL = {name="construction-robot", type="item"}
 local DECONSTRUCT_SIGNAL = {name="deconstruction-planner", type="item"}
@@ -18,24 +20,24 @@ for i = 1, 5 do
 end
 
 function Deployer.on_build(entity)
-  global.deployers[entity.unit_number] = entity
-  script.register_on_entity_destroyed(entity)
+  storage.deployers[entity.unit_number] = entity
+  script.register_on_object_destroyed(entity)
 end
 
 function Deployer.on_destroy(unit_number)
-  local deployer = global.deployers[unit_number]
+  local deployer = storage.deployers[unit_number]
   if deployer then
-    global.deployers[unit_number] = nil
+    storage.deployers[unit_number] = nil
   end
 end
 
 local function read_1_deploy_signal(get_signal)
-  return get_signal(DEPLOY_SIGNAL)
+  return get_signal(DEPLOY_SIGNAL, circuit_red, circuit_green)
 end
 local ALT_DEPLOY_SIGNAL = {name="construction-robot", type="item"}
 local function read_2_deploy_signals(get_signal)
-  local value = get_signal(DEPLOY_SIGNAL)
-  if value == 0 then value = get_signal(ALT_DEPLOY_SIGNAL) end
+  local value = get_signal(DEPLOY_SIGNAL, circuit_red, circuit_green)
+  if value == 0 then value = get_signal(ALT_DEPLOY_SIGNAL, circuit_red, circuit_green) end
   return value
 end
 local read_deploy_signal = read_1_deploy_signal
@@ -60,7 +62,7 @@ function Deployer.deploy_blueprint(bp, deployer)
   if not bp.is_blueprint_setup() then return end
 
   -- Rotate
-  local rotation = deployer.get_merged_signal(ROTATE_SIGNAL)
+  local rotation = deployer.get_signal(ROTATE_SIGNAL, circuit_red, circuit_green)
   local direction = defines.direction.north
   if (rotation == 1) then
     direction = defines.direction.east
@@ -95,6 +97,9 @@ function Deployer.deploy_blueprint(bp, deployer)
 end
 
 function Deployer.deconstruct_area(bp, deployer, deconstruct)
+  RB_util.warning_msgs(1)
+  if true then return end --TODO: remove after fix.
+
   local area = Deployer.get_area(deployer)
   local force = deployer.force
   if not deconstruct then
@@ -164,7 +169,7 @@ function Deployer.signal_filtred_deconstruction(deployer, deconstruct, whitelist
   local signal_r = false
   local signal_c = false
   -- Read whitelist/blacklist from signals.
-  for _, signal in pairs(deployer.get_merged_signals()) do
+  for _, signal in pairs(deployer.get_signals(circuit_red, circuit_green)) do
     if signal.count > 0 then
       local s_name = signal.signal.name
       if signal.signal.type == "item" then
@@ -206,8 +211,8 @@ function Deployer.signal_filtred_deconstruction(deployer, deconstruct, whitelist
           entity[func_name](force)
         end
       end
-      if signal_r and #global.rocks_names2>0 then
-        for _, entity in pairs(surface.find_entities_filtered{name = global.rocks_names2, area = area})do
+      if signal_r and #storage.rocks_names2>0 then
+        for _, entity in pairs(surface.find_entities_filtered{name = storage.rocks_names2, area = area})do
           entity[func_name](force)
         end
       end
@@ -248,8 +253,8 @@ function Deployer.signal_filtred_deconstruction(deployer, deconstruct, whitelist
           entity[func_name](force)
         end
       end
-      if not signal_r and #global.rocks_names2>0 then
-        for _, entity in pairs(surface.find_entities_filtered{name = global.rocks_names2, area = area})do
+      if not signal_r and #storage.rocks_names2>0 then
+        for _, entity in pairs(surface.find_entities_filtered{name = storage.rocks_names2, area = area})do
           entity[func_name](force)
         end
       end
@@ -265,7 +270,7 @@ end
 function Deployer.on_tick_deployer(deployer)
   if not deployer.valid then return end
   -- Read deploy signal
-  local get_signal = deployer.get_merged_signal
+  local get_signal = deployer.get_signal
   local deploy = read_deploy_signal(get_signal)
   if deploy ~= 0 then
     local command_direction = deploy > 0
@@ -278,7 +283,7 @@ function Deployer.on_tick_deployer(deployer)
       for i=1, 6 do
         inventory = bp.get_inventory(defines.inventory.item_main)
         if #inventory < 1 then return end -- Got an empty book, nothing to do
-        if i ~= 1 then deploy = get_signal(NESTED_DEPLOY_SIGNALS[i]) end
+        if i ~= 1 then deploy = get_signal(NESTED_DEPLOY_SIGNALS[i], circuit_red, circuit_green) end
         if (deploy < 1) or (deploy > #inventory) then break end -- Navigation is no longer applicable
         bp = inventory[deploy]
         if not bp.valid_for_read then return end -- Got an empty slot
@@ -299,7 +304,7 @@ function Deployer.on_tick_deployer(deployer)
   end
 
   -- Read deconstruct signal
-  local deconstruct = get_signal(DECONSTRUCT_SIGNAL)
+  local deconstruct = get_signal(DECONSTRUCT_SIGNAL, circuit_red, circuit_green)
   if deconstruct < 0 then
     if deconstruct == -1 then
       -- Deconstruct area
@@ -326,7 +331,7 @@ function Deployer.on_tick_deployer(deployer)
   end
 
   -- Read copy signal
-  local copy = get_signal(COPY_SIGNAL)
+  local copy = get_signal(COPY_SIGNAL, circuit_red, circuit_green)
   if copy ~= 0 then
     if copy == 1 then
       -- Copy blueprint
@@ -348,11 +353,11 @@ function Deployer.on_tick_deployer(deployer)
 end
 
 function Deployer.get_area(deployer)
-  local get_signal = deployer.get_merged_signal
-  local X = get_signal(X_SIGNAL)
-  local Y = get_signal(Y_SIGNAL)
-  local W = get_signal(WIDTH_SIGNAL)
-  local H = get_signal(HEIGHT_SIGNAL)
+  local get_signal = deployer.get_signal
+  local X = get_signal(X_SIGNAL, circuit_red, circuit_green)
+  local Y = get_signal(Y_SIGNAL, circuit_red, circuit_green)
+  local W = get_signal(WIDTH_SIGNAL, circuit_red, circuit_green)
+  local H = get_signal(HEIGHT_SIGNAL, circuit_red, circuit_green)
 
   if W < 1 then W = 1 end
   if H < 1 then H = 1 end
@@ -382,17 +387,17 @@ function Deployer.get_area(deployer)
 end
 
 function Deployer.get_area_signals(deployer)
-  local get_signal = deployer.get_merged_signal
-  return get_signal(WIDTH_SIGNAL), get_signal(HEIGHT_SIGNAL)
+  local get_signal = deployer.get_signal
+  return get_signal(WIDTH_SIGNAL, circuit_red, circuit_green), get_signal(HEIGHT_SIGNAL, circuit_red, circuit_green)
 end
 
 function Deployer.get_target_position(deployer)
   -- Shift x,y coordinates
   local d_pos = deployer.position
-  local get_signal = deployer.get_merged_signal
+  local get_signal = deployer.get_signal
   local position = {
-    x = d_pos.x + get_signal(X_SIGNAL),
-    y = d_pos.y + get_signal(Y_SIGNAL),
+    x = d_pos.x + get_signal(X_SIGNAL, circuit_red, circuit_green),
+    y = d_pos.y + get_signal(Y_SIGNAL, circuit_red, circuit_green),
   }
 
   -- Check for building out of bounds
@@ -408,9 +413,9 @@ end
 function Deployer.copy_blueprint(deployer)
   local inventory = deployer.get_inventory(defines.inventory.chest)
   if not inventory.is_empty() then return end
-  for _, signal in pairs(global.blueprint_signals) do
+  for _, signal in pairs(storage.blueprint_signals) do
     -- Check for a signal before doing an expensive search
-    if deployer.get_merged_signal(signal) >= 1 then
+    if deployer.get_signal(signal, circuit_red, circuit_green) >= 1 then
       -- Signal exists, now we have to search for the blueprint
       local stack = Deployer.find_stack_in_network(deployer, signal.name)
       if stack then
@@ -423,49 +428,48 @@ function Deployer.copy_blueprint(deployer)
 end
 
 -- Create a unique key for a circuit connector
-local function con_hash(entity, connector, wire)
-  return entity.unit_number .. "-" .. connector .. "-" .. wire
+local function con_hash(entity, connector)
+  return entity.unit_number .. "-" .. connector
 end
 
 -- Breadth-first search for an item in the circuit network
 -- If there are multiple items, returns the closest one (least wire hops)
 function Deployer.find_stack_in_network(deployer, item_name)
   local present = {
-    [con_hash(deployer, defines.circuit_connector_id.container, defines.wire_type.red)] =
+    [con_hash(deployer, defines.wire_connector_id.circuit_red)] =
     {
       entity = deployer,
-      connector = defines.circuit_connector_id.container,
-      wire = defines.wire_type.red,
+      wire_connector_id = defines.wire_connector_id.circuit_red,
     },
-    [con_hash(deployer, defines.circuit_connector_id.container, defines.wire_type.green)] =
+    [con_hash(deployer, defines.wire_connector_id.circuit_green)] =
     {
       entity = deployer,
-      connector = defines.circuit_connector_id.container,
-      wire = defines.wire_type.green,
+      wire_connector_id = defines.wire_connector_id.circuit_green,
     }
   }
   local past = {}
   local future = {}
   while next(present) do
-    for key, con in pairs(present) do
+    for key, current_con in pairs(present) do
+      e_con = current_con.entity.get_wire_connector(current_con.wire_connector_id)
       -- Search connecting wires
-      for _, def in pairs(con.entity.circuit_connection_definitions) do
-        -- Wire color and connection points must match
-        if def.target_entity.unit_number
-        and def.wire == con.wire
-        and def.source_circuit_id == con.connector then
-          local hash = con_hash(def.target_entity, def.target_circuit_id, def.wire)
-          if not past[hash] and not present[hash] and not future[hash] then
-            -- Search inside the entity
-            local stack = Deployer.find_stack_in_container(def.target_entity, item_name)
-            if stack then return stack end
+      if e_con and e_con.real_connections then
+        for _, w_con in pairs(e_con.real_connections) do
+          local distant_con = w_con.target
+          if distant_con.owner.unit_number
+          and distant_con.wire_connector_id == current_con.wire_connector_id then
+            local hash = con_hash(distant_con.owner, distant_con.wire_connector_id)
+            if not past[hash] and not present[hash] and not future[hash] then
+              -- Search inside the entity
+              local stack = Deployer.find_stack_in_container(distant_con.owner, item_name)
+              if stack then return stack end
 
-            -- Add entity connections to future searches
-            future[hash] = {
-              entity = def.target_entity,
-              connector = def.target_circuit_id,
-              wire = def.wire
-            }
+              -- Add entity connections to future searches
+              future[hash] = {
+                entity = distant_con.owner,
+                wire_connector_id = distant_con.wire_connector_id,
+              }
+            end
           end
         end
       end
@@ -517,10 +521,10 @@ function Deployer.cache_blueprint_signals()
     {filter = "type", type="upgrade-item"},
     {filter = "type", type="deconstruction-item"}
   }
-  for _, item in pairs(game.get_filtered_item_prototypes(filter)) do
+  for _, item in pairs(prototypes.get_item_filtered(filter)) do
     table.insert(blueprint_signals, {name=item.name, type="item"})
   end
-  global.blueprint_signals = blueprint_signals
+  storage.blueprint_signals = blueprint_signals
 end
 
 local LOGGING_SIGNAL = {name="signal-L", type="virtual"}
@@ -546,7 +550,7 @@ local function make_bp_name_string(bp)
 end
 
 local function deployer_logging_func(msg_type, deployer, vars)
-  if deployer.get_merged_signal(LOGGING_SIGNAL) < LOGGING_LEVEL then
+  if deployer.get_signal(LOGGING_SIGNAL, circuit_red, circuit_green) < LOGGING_LEVEL then
     return
   end
 
