@@ -4,6 +4,7 @@ Date: ????
   Changes:
     - Initial port to Factorio 2.0
     - Remover depricatet function: Switching the train to automatic mode after construction from the BP.
+    - Removed depricatet setting: startup, "Additional scanner output slots"
 ---------------------------------------------------------------------------------------------------
 Version: 1.3.15
 Date: 2023-12-13

@@ -14,14 +14,6 @@ data:extend{
     allowed_values = {"never", "with_L_greater_than_zero", "with_L_greater_or_equal_to_zero", "always"},
   },
   {
-    type = "int-setting",
-    name = "recursive-blueprints-scanner-extra-slots",
-    setting_type = "startup",
-    minimum_value = 0,
-    maximum_value = 50,
-    default_value = 10
-  },
-  {
     type = "string-setting",
     name = "recursive-blueprints-deployer-deploy-signal",
     setting_type = "runtime-global",

@@ -60,7 +60,6 @@ data:extend{
     circuit_wire_connection_points = {con_point, con_point, con_point, con_point},
     circuit_wire_max_distance = 9,
     --drawing_box = {{-1, -2.5}, {1, 1}},
-    --item_slot_count = 10, -- Will be changed in data-updates.lua
     sprites = {
       layers = {
         {

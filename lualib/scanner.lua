@@ -328,7 +328,7 @@ function AreaScanner.scan_resources(scanner)
   if counters.water.is_shown then
     local water = 0
     for _, area in pairs(areas)do
-      water = water + surface.count_tiles_filtered{area = area, collision_mask = "water-tile"}
+      water = water + surface.count_tiles_filtered{area = area, collision_mask = "water_tile"}
     end
     scans.counters.water = water
   end
@@ -343,33 +343,36 @@ function AreaScanner.scan_resources(scanner)
                         + count_placeable(prototypes.tile, scans.ghost_tiles, result2, filters.show_ghosts)
 
   -- Copy resources to combinator output
-  local behavior = scanner.entity.get_control_behavior()
+  local behavior = RB_util.clear_constant_combinator(scanner.entity.get_control_behavior())
+  if not behavior or not behavior.valid then return end
   local index = 1
-  local max_index = behavior.signals_count
-  behavior.parameters = nil
 
   -- Counters
   for name, counter_setting in pairs(counters) do
-    if counter_setting.is_shown and counter_setting.signal then
+    local signal = counter_setting.signal
+    if counter_setting.is_shown and signal then
       local count = scans.counters[name]
       if count and count ~= 0 then
         if counter_setting.is_negative then count = -count end
-        count = AreaScanner.check_scan_signal_collision(count, result1, counter_setting.signal)
-        count = AreaScanner.check_scan_signal_collision(count, result2, counter_setting.signal)
+        count = AreaScanner.check_scan_signal_collision(count, result1, signal)
+        count = AreaScanner.check_scan_signal_collision(count, result2, signal)
         if count > 2147483647 then count = 2147483647 end -- Avoid int32 overflow
         if count < -2147483648 then count = -2147483648 end
-        behavior.set_signal(index, {signal=counter_setting.signal, count=count})
+                                ---@diagnostic disable-next-line: missing-fields
+        behavior.set_slot(index, {value=RB_util.get_signal_filter(signal), min=count})
         index = index + 1
       end
     end
   end
   -- ore, trees, rocks, fish
   for type, result in pairs(result1) do
-    for name, count in pairs(result) do
+    for name, count in pairs(result) do ---@cast name string
       if count ~= 0 then
-        count = AreaScanner.check_scan_signal_collision(count, result2, {type = type, name = name})
+        local signal = {type = type, name = name}
+        count = AreaScanner.check_scan_signal_collision(count, result2, signal)
         if count > 2147483647 then count = 2147483647 end
-        behavior.set_signal(index, {signal={type=type, name=name}, count=count})
+                                ---@diagnostic disable-next-line: missing-fields
+        behavior.set_slot(index, {value=RB_util.get_signal_filter(signal), min=count})
         index = index + 1
       end
     end
@@ -380,19 +383,19 @@ function AreaScanner.scan_resources(scanner)
     for name, count in pairs(result) do
       if count ~= 0 then
         if count > 2147483647 then count = 2147483647 end
-        table.insert(result1, {signal={type=type, name=name}, count=count})
+        table.insert(result1, {value=RB_util.get_signal_filter({type=type, name=name}), min=count})
       end
     end
   end
   table.sort(result1,
     function(s1, s2)
-      if s1.count == s2.count then return s1.signal.name < s2.signal.name end
-      return s1.count > s2.count
+      if s1.min == s2.min then return s1.value.name < s2.value.name end
+      return s1.min > s2.min
     end
   )
   for _, result in ipairs(result1) do
-    if index > max_index then break end
-    behavior.set_signal(index, result)
+    --if index > 100 then break end
+    behavior.set_slot(index, result)
     index = index + 1
   end
 end

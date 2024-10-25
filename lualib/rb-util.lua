@@ -136,6 +136,28 @@ function RB_util.cache_rocks_names()
   storage.rocks_names2 = rocks2
 end
 
+---Delete all signals in constant combinator end return LuaLogisticSection if pissible.
+---@param behavior LuaConstantCombinatorControlBehavior
+---@return LuaLogisticSection|nil
+function RB_util.clear_constant_combinator(behavior)
+  if not behavior or not behavior.valid then return nil end
+  if behavior.sections_count > 1 then while(behavior.remove_section(1)) do end end
+  local section = behavior.sections[1]
+  if not section.is_manual then return nil end
+  section.filters = {}
+  section.multiplier = 1
+  section.group = ""
+  section.active = true
+  behavior.enabled = true
+  return section
+end
+
+---@param signal table
+---@return SignalFilter
+function RB_util.get_signal_filter(signal)
+  return {type=signal.type, name=signal.name, quality="normal", comparator="="}
+end
+
 function RB_util.warning_msgs(msg_i)
   if (msg_i < 0) or (msg_i > 1) then return end
   if not storage.arning_msg then storage.arning_msg = {} end
