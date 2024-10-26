@@ -68,9 +68,9 @@ local tabbed_pane = {
     left_padding = 10,
     right_padding = 10,
     top_margin = 2,
-    --graphical_set = {
-    --  base = table.deepcopy(data.raw["gui-style"]["default"]["filter_tabbed_pane"].tab_content_frame.graphical_set.base.center)
-    --},
+    graphical_set = {
+      base = table.deepcopy(data.raw["gui-style"]["default"]["filter_frame"].graphical_set.base.center)
+    },
   },
 }
 data.raw["gui-style"]["default"]["recursive-blueprints-tabbed-pane"] = tabbed_pane

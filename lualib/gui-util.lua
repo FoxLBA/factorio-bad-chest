@@ -38,9 +38,9 @@ function GUI_util.add_titlebar(element, drag_target, caption, close_button_name,
       type = "sprite-button",
       name = close_button_name,
       style = "frame_action_button",
-      sprite = "utility/close_white",
-      hovered_sprite = "utility/close_black",
-      clicked_sprite = "utility/close_black",
+      sprite = "utility/close",
+      hovered_sprite = "utility/close",
+      clicked_sprite = "utility/close",
       tooltip = close_button_tooltip,
     }
   end
@@ -53,7 +53,7 @@ function GUI_util.add_status_indicator(element, entity)
   local indicator = element.add{type = "flow", direction = "vertical"}
   local status_flow = indicator.add{
     type = "flow",
-    style = "status_flow",
+    --style = "status_flow",
   }
   status_flow.style.vertical_align = "center"
   status_flow.add{
@@ -98,20 +98,20 @@ end
 function GUI_util.get_localised_name(signal)
   if not signal.type or not signal.name then return "" end
   if signal.type == "item" then
-    if game.item_prototypes[signal.name] then
-      return game.item_prototypes[signal.name].localised_name
+    if prototypes.item[signal.name] then
+      return prototypes.item[signal.name].localised_name
     else
       return {"item-name." .. signal.name}
     end
   elseif signal.type == "fluid" then
-    if game.fluid_prototypes[signal.name] then
-      return game.fluid_prototypes[signal.name].localised_name
+    if prototypes.fluid[signal.name] then
+      return prototypes.fluid[signal.name].localised_name
     else
       return {"fluid-name." .. signal.name}
     end
   elseif signal.type == "virtual" then
-    if game.virtual_signal_prototypes[signal.name] then
-      return game.virtual_signal_prototypes[signal.name].localised_name
+    if prototypes.virtual_signal[signal.name] then
+      return prototypes.virtual_signal[signal.name].localised_name
     else
       return {"virtual-signal-name." .. signal.name}
     end
@@ -243,7 +243,7 @@ function GUI_util.add_signal_select_frame(element, selected_signal)
     -- Add scrollbars in case there are too many signals
     local scroll_pane = tabbed_pane.add{
       type = "scroll-pane",
-      style = "recursive-blueprints-scroll",
+      style="deep_slots_scroll_pane",
       direction = "vertical",
       horizontal_scroll_policy = "never",
       vertical_scroll_policy = "auto",
@@ -251,12 +251,13 @@ function GUI_util.add_signal_select_frame(element, selected_signal)
     scroll_pane.style.height = 364
     scroll_pane.style.maximal_width = 424
     local scroll_frame = scroll_pane.add{
-      type = "frame",
-      style = "filter_scroll_pane_background_frame",
+      type = "flow",
+      style = "packed_vertical_flow",
       direction = "vertical",
     }
     scroll_frame.style.width = 400
     scroll_frame.style.minimal_height = 40
+    scroll_frame.style.vertically_stretchable = true
     -- Add signals
     for i = 1, #group.subgroups do
       for j = 1, #group.subgroups[i], 10 do
@@ -296,7 +297,7 @@ function GUI_util.add_signal_select_frame(element, selected_signal)
   -- Add fake tab buttons with images
   local tab_bar = tab_scroll_pane.add{
     type = "table",
-    style = "filter_group_table",
+    style = "editor_mode_selection_table",
     column_count = 6,
   }
   tab_bar.style.width = 420
@@ -315,6 +316,8 @@ function GUI_util.add_signal_select_frame(element, selected_signal)
 end
 
 function GUI_util.highlight_tab_button(button, index)
+  button.style = "recursive-blueprints-tab-button-selected"
+  --[[
   local column = index % 6
   if #storage.gui_util_groups > 6 then
     button.style = "recursive-blueprints-tab-button-selected-grid"
@@ -325,6 +328,7 @@ function GUI_util.highlight_tab_button(button, index)
   else
     button.style = "recursive-blueprints-tab-button-selected"
   end
+  ]]
 end
 
 -- Add tab button for signal select frame.
@@ -336,10 +340,12 @@ function GUI_util.add_tab_button(row, i, selected)
     tooltip = {"item-group-name." .. name},
     tags = {["recursive-blueprints-tab-index"] = i},
   }
-  if #storage.gui_util_groups > 6 then
+  --[[
+  if #storage.gui_util_grps > 6 then
     button.style = "filter_group_button_tab"
   end
-  if game.is_valid_sprite_path("item-group/" .. name) then
+  ]]
+  if helpers.is_valid_sprite_path("item-group/" .. name) then
     button.sprite = "item-group/" .. name
   else
     button.caption = {"item-group-name." .. name}
@@ -359,11 +365,14 @@ function GUI_util.select_tab_by_index(element, index)
   local tab_bar = element.parent
   -- Un-highlight old tab button
   for i = 1, #tab_bar.children do
+    tab_bar.children[i].style = "recursive-blueprints-tab-button"
+    --[[
     if #storage.gui_util_groups > 6 then
-      tab_bar.children[i].style = "filter_group_button_tab"
+      --tab_bar.children[i].style = "filter_group_button_tab"
     else
       tab_bar.children[i].style = "recursive-blueprints-tab-button"
     end
+    ]]
   end
   GUI_util.highlight_tab_button(element, index)
   -- Show new tab content

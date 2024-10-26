@@ -46,7 +46,7 @@ function AreaScannerGUI.create_scanner_gui(player, entity)
   left_flow.style.right_margin = 8
   left_flow.add{
     type = "label",
-    style = "heading_3_label",
+    style = "heading_2_label",
     caption = {"description.scan-area"},
   }
   local input_flow = left_flow.add{type = "flow", direction = "vertical"}
@@ -79,7 +79,7 @@ function AreaScannerGUI.create_scanner_gui(player, entity)
   local o_line =  inner_frame.add{type = "flow"}
   o_line.add{
     type = "label",
-    style = "heading_3_label",
+    style = "heading_2_label",
     caption = {"description.output-signals"},
   }
   local toggle_settings = o_line.add{
@@ -95,31 +95,22 @@ function AreaScannerGUI.create_scanner_gui(player, entity)
 
   local scroll_pane = inner_frame.add{
     type = "scroll-pane",
-    style = "recursive-blueprints-scroll",
+    style = "deep_slots_scroll_pane",
     direction = "vertical",
     horizontal_scroll_policy = "never",
     vertical_scroll_policy = "auto",
   }
   scroll_pane.style.maximal_height = 164
-  local scroll_frame = scroll_pane.add{
-    type = "frame",
-    style = "filter_scroll_pane_background_frame",
+
+  --create panel with output signals.
+  --this panel will be populatet in AreaScannerGUI.update_scanner_output()
+  local output_flow = scroll_pane.add{
+    type = "flow",
+    style = "packed_vertical_flow",
     direction = "vertical",
   }
-  scroll_frame.style.width = 400
-  scroll_frame.style.minimal_height = 40
-  local slots = scanner.entity.prototype.item_slot_count
-  for i = 1, slots, 10 do
-    local row = scroll_frame.add{type = "flow", style = "packed_horizontal_flow"}
-    for j = 0, 9 do
-      if i+j <= slots then
-        row.add{
-          type = "sprite-button",
-          style = "recursive-blueprints-output",
-        }
-      end
-    end
-  end
+  output_flow.style.width = 400
+  output_flow.style.minimal_height = 40
 
   -- Output settings
   local counters_frame = gui.add{type = "frame", direction = "vertical"}
@@ -294,7 +285,7 @@ function AreaScannerGUI.create_signal_gui(element)
 
     -- Submit button
     local filler = inner_frame.add{type = "empty-widget"}
-    filler.style.horizontally_stretchable = "on"
+    filler.style.horizontally_stretchable = true
     inner_frame.add{
       type = "button",
       style = "recursive-blueprints-set-button",
@@ -367,7 +358,7 @@ function AreaScannerGUI.create_signal_gui(element)
     textfield.text = tostring(AreaScanner.get_filter_mask(scanner.settings))
     -- Submit button
     local filler = filter_end_line.add{type = "empty-widget"}
-    filler.style.horizontally_stretchable = "on"
+    filler.style.horizontally_stretchable = true
     filter_end_line.add{
       type = "button",
       style = "recursive-blueprints-set-button",
@@ -608,28 +599,36 @@ end
 
 -- Display all constant-combinator output signals in the gui
 function AreaScannerGUI.update_scanner_output(output_flow, entity)
-  local behavior = entity.get_control_behavior()
-  for i = 1, entity.prototype.item_slot_count do
-    -- 10 signals per row
-    local row = math.ceil(i / 10)
-    local col = (i-1) % 10 + 1
-    local button = output_flow.children[row].children[col]
-    local signal = behavior.get_signal(i)
-    if signal and signal.signal and signal.signal.name then
-      -- Display signal and value
-      button.number = signal.count
-      button.sprite = GUI_util.get_signal_sprite(signal.signal)
-      button.tooltip = {"",
-        "[font=default-bold][color=255,230,192]",
-        GUI_util.get_localised_name(signal.signal),
-        ":[/color][/font] ",
-        GUI_util.format_amount(signal.count),
-      }
-    else
-      -- Display empty slot
-      button.number = nil
-      button.sprite = nil
-      button.tooltip = ""
+  while #output_flow.children > 0 do output_flow.children[1].destroy() end
+  local behavior = entity.get_control_behavior().get_section(1)
+  if behavior then
+    local slots = behavior.filters_count
+    for i = 1, slots, 10 do
+      local row = output_flow.add{type = "flow", style = "packed_horizontal_flow"}
+      for j = 0, 9 do
+        if i+j <= slots then
+          local signal = behavior.get_slot(i+j)
+          if signal and signal.value and signal.value.name then
+            row.add{
+              type = "sprite-button",
+              style = "recursive-blueprints-output",
+              number = signal.min,
+              sprite = GUI_util.get_signal_sprite(signal.value),
+              tooltip = {"",
+                "[font=default-bold][color=255,230,192]",
+                GUI_util.get_localised_name(signal.value),
+                ":[/color][/font] ",
+                GUI_util.format_amount(signal.min),
+              }
+            }
+          else
+            row.add{
+              type = "sprite-button",
+              style = "recursive-blueprints-output",
+            }
+          end
+        end
+      end
     end
   end
 end
