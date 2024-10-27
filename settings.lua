@@ -3,7 +3,7 @@ data:extend{
     type = "string-setting",
     name = "recursive-blueprints-area",
     setting_type = "runtime-global",
-    default_value = "center",
+    default_value = "corner",
     allowed_values = {"center", "corner"},
   },
   {
@@ -17,7 +17,7 @@ data:extend{
     type = "string-setting",
     name = "recursive-blueprints-deployer-deploy-signal",
     setting_type = "runtime-global",
-    default_value = "construction_robot",
+    default_value = "zero",
     allowed_values = {"construction_robot", "zero", "both"}
   },
   {

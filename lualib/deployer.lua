@@ -11,6 +11,7 @@ local Y_SIGNAL = {name="signal-Y", type="virtual"}
 local WIDTH_SIGNAL = {name="signal-W", type="virtual"}
 local HEIGHT_SIGNAL = {name="signal-H", type="virtual"}
 local ROTATE_SIGNAL = {name="signal-R", type="virtual"}
+local SUPERFORCED_SIGNAL = {name="signal-F", type="virtual"}
 local NESTED_DEPLOY_SIGNALS = {DEPLOY_SIGNAL}
 for i = 1, 5 do
     table.insert(
@@ -19,12 +20,12 @@ for i = 1, 5 do
     )
 end
 
-function Deployer.on_build(entity)
+function Deployer.on_built(entity)
   storage.deployers[entity.unit_number] = entity
   script.register_on_object_destroyed(entity)
 end
 
-function Deployer.on_destroy(unit_number)
+function Deployer.on_destroyed(unit_number)
   local deployer = storage.deployers[unit_number]
   if deployer then
     storage.deployers[unit_number] = nil
@@ -74,32 +75,27 @@ function Deployer.deploy_blueprint(bp, deployer)
 
   local position = Deployer.get_target_position(deployer)
   if not position then return end
-
+  local build_mode = defines.build_mode.forced
+  if deployer.get_signal(SUPERFORCED_SIGNAL, circuit_red, circuit_green) > 0 then
+    ---@diagnostic disable-next-line: cast-local-type
+    build_mode = defines.build_mode.superforced
+  end
   -- Build blueprint
-  local result = bp.build_blueprint{
+  bp.build_blueprint{
     surface = deployer.surface,
     force = deployer.force,
     position = position,
     direction = direction,
-    force_build = true,
+    build_mode = build_mode,
+    raise_built = true,
   }
 
-  -- Raise event for ghosts created
-  for _, ghost in pairs(result) do
-    script.raise_event(defines.events.script_raised_built, {
-      entity = ghost,
-      stack = bp,
-    })
-  end
   Deployer.deployer_logging("point_deploy", deployer,
                     {bp = bp, position = position, direction = direction}
                   )
 end
 
 function Deployer.deconstruct_area(bp, deployer, deconstruct)
-  RB_util.warning_msgs(1)
-  if true then return end --TODO: remove after fix.
-
   local area = Deployer.get_area(deployer)
   local force = deployer.force
   if not deconstruct then
@@ -439,11 +435,11 @@ end
 function Deployer.find_stack_in_network(deployer, item_name, red, green)
   local present = {}
   if red then
-    local c = deployer.get_wire_connector(defines.wire_connector_id.circuit_red)
+    local c = deployer.get_wire_connector(circuit_red)
     present[con_hash(c)] = c
   end
   if green then
-    local c = deployer.get_wire_connector(defines.wire_connector_id.circuit_green)
+    local c = deployer.get_wire_connector(circuit_green)
     present[con_hash(c)] = c
   end
   local past = {}
@@ -594,4 +590,6 @@ function Deployer.toggle_logging()
   end
 end
 
+Deployer.toggle_deploy_signal_setting()
+Deployer.toggle_logging()
 return Deployer

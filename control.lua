@@ -9,7 +9,6 @@ local function init_caches()
   RB_util.cache_rocks_names()
   GUI_util.cache_signals()
   Deployer.cache_blueprint_signals()
-  Deployer.toggle_logging()
   AreaScanner.cache_infinite_resources()
   -- Check deleted signals in the default scanner settings.
   AreaScanner.mark_unknown_signals(AreaScanner.DEFAULT_SCANNER_SETTINGS)
@@ -34,7 +33,7 @@ local function on_mods_changed(event)
         if entity.name == "blueprint-deployer" then
           storage.deployers[entity.unit_number] = entity
         elseif entity.name == "recursive-blueprints-scanner" then
-          AreaScanner.on_built_scanner(entity, {})
+          AreaScanner.on_built(entity, {})
         end
       end
     end
@@ -47,7 +46,7 @@ local function on_mods_changed(event)
     local a, b, c = string.match(event.mod_changes["rec-blue-plus"].old_version, "(%d+).(%d+).(%d+)")
     if (tonumber(b) <= 3) and (tonumber(c) < 11) then
       for _, scanner in pairs(storage.scanners or {}) do
-        AreaScanner.on_built_scanner(scanner.entity, {tags = scanner})
+        AreaScanner.on_built(scanner.entity, {tags = scanner})
       end
     end
   end
@@ -107,24 +106,26 @@ local function on_built(event)
   if not entity or not entity.valid then return end
 
   if entity.name == "blueprint-deployer" then
-    Deployer.on_build(entity)
+    Deployer.on_built(entity)
   elseif entity.name == "recursive-blueprints-scanner" then
-    AreaScanner.on_built_scanner(entity, event)
+    AreaScanner.on_built(entity, event)
   end
 end
 
 local function on_object_destroyed(event)
   if not event.unit_number then return end
-  AreaScanner.on_destroyed_scanner(event.unit_number)
-  Deployer.on_destroy(event.unit_number)
+  AreaScanner.on_destroyed(event.unit_number)
+  Deployer.on_destroyed(event.unit_number)
 end
 
 local function on_player_setup_blueprint(event)
   -- Find the blueprint item
   local player = game.get_player(event.player_index)
+  local stack = event.stack
   local bp = nil
   if player and player.blueprint_to_setup and player.blueprint_to_setup.valid_for_read then bp = player.blueprint_to_setup
-  elseif player and player.cursor_stack.valid_for_read and player.cursor_stack.is_blueprint then bp = player.cursor_stack end
+  --  elseif player and player.cursor_stack.valid_for_read and player.cursor_stack.is_blueprint then bp = player.cursor_stack end
+  elseif stack and stack.valid_for_read and stack.is_blueprint then bp = stack end
   if not bp or not bp.is_blueprint_setup() then
     -- Maybe the player is selecting new contents for a blueprint?
     bp = storage.blueprints[event.player_index]
@@ -132,21 +133,9 @@ local function on_player_setup_blueprint(event)
 
   if bp and bp.valid and bp.is_blueprint and bp.is_blueprint_setup() then
     local mapping = event.mapping.get()
-    local blueprint_entities = bp.get_blueprint_entities()
-    local found = false
-    if blueprint_entities then
-      for _, bp_entity in pairs(blueprint_entities) do
-        local entity = mapping[bp_entity.entity_number]
-        if bp_entity.name == "recursive-blueprints-scanner" then
-          found = true
-          bp_entity.control_behavior = nil
-          if entity then
-            bp_entity.tags = AreaScanner.serialize(entity)
-          end
-        end
-      end
-      if found then
-        bp.set_blueprint_entities(blueprint_entities)
+    for index, entity in pairs(mapping) do
+      if entity and entity.name and entity.name == "recursive-blueprints-scanner" then
+        bp.set_blueprint_entity_tags(index, AreaScanner.serialize(entity))
       end
     end
   end

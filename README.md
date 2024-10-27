@@ -7,6 +7,8 @@ Example commands:
 Deploy blueprint.
 Construction robot signal is the "use blueprint" command. Can be any value ≠ 0.
 
+Important note: starting from version Factorio 2.0, the signal for this command has been replaced with "Virtual zero". The previous signal can be returned by map setting "Deploy signal for the deployer".
+
 ---
 
 ![Construction robot = 2](docs/construction-robot_2.jpg)
@@ -77,15 +79,17 @@ Delete blueprint or blueprint book.
 
 *Additional parameters*
 
-X and Y signals shift the position of the construction/deconstruction/upgrade order.
+"X" and "Y" signals shift the position of the construction/deconstruction/upgrade order.
 
-Deconstruction and upgrades use X, Y as the center of the area. This can be changed to the top left corner of the area in mod settings. (This option affects the scanner (see below) in a similar way)
+Deconstruction and upgrades use "X", "Y" as the top left corner of the area. This can be changed to the center of the area in mod settings. (This option affects the scanner (see below) in a similar way)
 
-R signal rotates the blueprint. R = 1 = 90° clockwise, R = 2 = 180°, R = 3 = 90° counterclockwise.
+"R" signal rotates the blueprint. "R" = 1 = 90° clockwise, "R" = 2 = 180°, "R" = 3 = 90° counterclockwise.
+
+"F">0 signal use "Super force building"™ for blueprint.
 
 To change the center of the blueprint, enable grid size (1x1 is recommended), and set an absolute reference point.
 
-L signal is used to display debug messages (it is necessary to enable the trigger condition in the mod settings).
+"L" signal is used to display debug messages (it is necessary to enable the trigger condition in the mod settings).
 Each activation will display in the chat the location of the triggered deployer, the name of the blueprint and the place where the blueprint is applied (if the offset is not zero)
 *Warning*: The chat may omit some of the messages if they are displayed very quickly.
 

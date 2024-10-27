@@ -77,8 +77,6 @@ local NEW_SCANNER_SETTINGS = {
 local circuit_red = defines.wire_connector_id.circuit_red
 local circuit_green = defines.wire_connector_id.circuit_green
 
-AreaScanner.DEFAULT_SCANNER_SETTINGS = NEW_SCANNER_SETTINGS
-
 AreaScanner.FILTER_MASK_ORDER = {
   {group = "filters",  name = "blank"},
   {group = "filters",  name = "show_resources"},
@@ -136,7 +134,7 @@ function AreaScanner.on_tick_scanner(scanner)
   end
 end
 
-function AreaScanner.on_built_scanner(entity, event)
+function AreaScanner.on_built(entity, event)
   local tags = event.tags
   if event.source and event.source.valid then
     -- Copy settings from clone
@@ -237,7 +235,7 @@ function AreaScanner.make_previous(scanner)
   end
 end
 
-function AreaScanner.on_destroyed_scanner(unit_number)
+function AreaScanner.on_destroyed(unit_number)
   local scanner = storage.scanners[unit_number]
   if scanner then
     storage.scanners[unit_number] = nil
@@ -807,4 +805,5 @@ function AreaScanner.get_scan_area(scaner_position, area_settings)
   return area
 end
 
+AreaScanner.toggle_default_settings()
 return AreaScanner
