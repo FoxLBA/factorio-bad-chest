@@ -415,9 +415,11 @@ function Deployer.copy_blueprint(deployer)
   if not inventory.is_empty() then return end
   for _, signal in pairs(storage.blueprint_signals) do
     -- Check for a signal before doing an expensive search
-    if deployer.get_signal(signal, circuit_red, circuit_green) >= 1 then
+    local r = deployer.get_signal(signal, circuit_red) >= 1
+    local g = deployer.get_signal(signal, circuit_green) >= 1
+    if r or g then
       -- Signal exists, now we have to search for the blueprint
-      local stack = Deployer.find_stack_in_network(deployer, signal.name)
+      local stack = Deployer.find_stack_in_network(deployer, signal.name, r, g)
       if stack then
         inventory[1].set_stack(stack)
         Deployer.deployer_logging("copy_book", deployer, stack)
@@ -428,47 +430,38 @@ function Deployer.copy_blueprint(deployer)
 end
 
 -- Create a unique key for a circuit connector
-local function con_hash(entity, connector)
-  return entity.unit_number .. "-" .. connector
+local function con_hash(connector)
+  return connector.owner.unit_number .. "-" .. connector.wire_connector_id
 end
 
 -- Breadth-first search for an item in the circuit network
 -- If there are multiple items, returns the closest one (least wire hops)
-function Deployer.find_stack_in_network(deployer, item_name)
-  local present = {
-    [con_hash(deployer, defines.wire_connector_id.circuit_red)] =
-    {
-      entity = deployer,
-      wire_connector_id = defines.wire_connector_id.circuit_red,
-    },
-    [con_hash(deployer, defines.wire_connector_id.circuit_green)] =
-    {
-      entity = deployer,
-      wire_connector_id = defines.wire_connector_id.circuit_green,
-    }
-  }
+function Deployer.find_stack_in_network(deployer, item_name, red, green)
+  local present = {}
+  if red then
+    local c = deployer.get_wire_connector(defines.wire_connector_id.circuit_red)
+    present[con_hash(c)] = c
+  end
+  if green then
+    local c = deployer.get_wire_connector(defines.wire_connector_id.circuit_green)
+    present[con_hash(c)] = c
+  end
   local past = {}
   local future = {}
   while next(present) do
     for key, current_con in pairs(present) do
-      e_con = current_con.entity.get_wire_connector(current_con.wire_connector_id)
       -- Search connecting wires
-      if e_con and e_con.real_connections then
-        for _, w_con in pairs(e_con.real_connections) do
+      if current_con and current_con.real_connections then
+        for _, w_con in pairs(current_con.real_connections) do
           local distant_con = w_con.target
-          if distant_con.owner.unit_number
-          and distant_con.wire_connector_id == current_con.wire_connector_id then
-            local hash = con_hash(distant_con.owner, distant_con.wire_connector_id)
+          if distant_con.valid and distant_con.owner and distant_con.owner.valid then
+            local hash = con_hash(distant_con)
             if not past[hash] and not present[hash] and not future[hash] then
               -- Search inside the entity
               local stack = Deployer.find_stack_in_container(distant_con.owner, item_name)
               if stack then return stack end
-
-              -- Add entity connections to future searches
-              future[hash] = {
-                entity = distant_con.owner,
-                wire_connector_id = distant_con.wire_connector_id,
-              }
+              -- Add wier connector to future searches
+              future[hash] = distant_con
             end
           end
         end
