@@ -1,34 +1,4 @@
--- Blueprint deployer
-local deployer = table.deepcopy(data.raw["container"]["steel-chest"])
-deployer.name = "blueprint-deployer"
-deployer.icon = "__rec-blue-plus__/graphics/blueprint-deployer-icon.png"
-deployer.minable.result = "blueprint-deployer"
-deployer.inventory_size = 1
-deployer.inventory_type = "normal"
-deployer.se_allow_in_space = true
-deployer.picture.layers = {
-  {
-    filename = "__rec-blue-plus__/graphics/hr-blueprint-deployer.png",
-    width = 66,
-    height = 72,
-    shift = util.by_pixel(0, -2.5),
-    scale = 0.5,
-    priority = "high",
-  },
-  {
-    filename = "__base__/graphics/entity/roboport/roboport-base-animation.png",
-    width = 83,
-    height = 59,
-    shift = util.by_pixel(0.25, -17),
-    scale = 0.5,
-    priority = "high",
-  },
-  -- Shadow
-  table.deepcopy(data.raw["container"]["iron-chest"].picture.layers[2])
-}
-data:extend{deployer}
-
--- Resource scanner
+local item_sounds = require("__base__.prototypes.item_sounds")
 local accumulator = table.deepcopy(data.raw["accumulator"]["accumulator"])
 local substation = table.deepcopy(data.raw["electric-pole"]["substation"])
 local con_point = {
@@ -40,7 +10,6 @@ data:extend{
     type = "constant-combinator",
     name = "recursive-blueprints-scanner",
     icon = "__rec-blue-plus__/graphics/scanner-icon.png",
-    --icon_mipmaps = 4,
     icon_size = 64,
     flags = {"placeable-neutral", "player-creation", "hide-alt-info", "not-rotatable"},
     minable = {mining_time = 0.1, result = "recursive-blueprints-scanner"},
@@ -59,7 +28,7 @@ data:extend{
     activity_led_sprites = {filename = "__core__/graphics/empty.png", size = 1},
     circuit_wire_connection_points = {con_point, con_point, con_point, con_point},
     circuit_wire_max_distance = 9,
-    --drawing_box = {{-1, -2.5}, {1, 1}},
+    drawing_box_vertical_extension = 1.5,
     sprites = {
       layers = {
         {
@@ -75,5 +44,29 @@ data:extend{
         substation.pictures.layers[2],
       }
     },
-  }
+  },
+  {
+    type = "item",
+    name = "recursive-blueprints-scanner",
+    icon = "__rec-blue-plus__/graphics/scanner-icon.png",
+    icon_size = 64,
+    inventory_move_sound = item_sounds.metal_large_inventory_move,
+    pick_sound = item_sounds.metal_large_inventory_pickup,
+    drop_sound = item_sounds.metal_large_inventory_move,
+    subgroup = "circuit-network",
+    order = "d[other]-c[recursive-blueprints-scanner]",
+    place_result = "recursive-blueprints-scanner",
+    stack_size = 50,
+  },
+  {
+    type = "recipe",
+    name = "recursive-blueprints-scanner",
+    results = {{type="item", name="recursive-blueprints-scanner", amount=1}},
+    enabled = false,
+    ingredients = {
+      {type="item", name="electronic-circuit", amount=5},
+      {type="item", name="iron-gear-wheel", amount=5},
+      {type="item", name="iron-plate", amount=10},
+    },
+  },
 }

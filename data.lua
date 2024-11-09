@@ -1,6 +1,5 @@
-require("prototypes.entity")
 require("prototypes.font")
-require("prototypes.item")
-require("prototypes.recipe")
 require("prototypes.style")
+require("prototypes.deployer")
+require("prototypes.scanner")
 require("prototypes.technology")
