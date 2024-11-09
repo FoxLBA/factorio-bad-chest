@@ -7,7 +7,7 @@ Example commands:
 Deploy blueprint.
 Construction robot signal is the "use blueprint" command. Can be any value ≠ 0.
 
-Important note: starting from version Factorio 2.0, the signal for this command has been replaced with "Virtual zero". The previous signal can be returned by map setting "Deploy signal for the deployer".
+*Important note*: starting from version Factorio 2.0, the signal for this command has been replaced with "Virtual zero". The previous signal can be returned by map setting "Deploy signal for the deployer".
 
 ---
 
@@ -30,7 +30,7 @@ To select blueprint in book (which may also be in the book), additional signals 
 ![Construction robot = 1](docs/construction-robot_3.jpg)
 
 Deconstruct or upgrade area.
-W = width, H = height.
+"W" = width, "H" = height.
 Supports deconstruction filters.
 The deployer chest will never deconstruct itself with this command.
 

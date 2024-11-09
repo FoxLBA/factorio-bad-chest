@@ -136,7 +136,7 @@ function GUI_util.get_signal_sprite(signal)
 end
 
 -- Format data for the signal-or-number button
-function GUI_util.set_slot_button(button, signal)
+function GUI_util.set_slot_button(button, signal, number)
   if type(signal) == "table" then
     button.caption = ""
     button.style.natural_width = 40
@@ -146,11 +146,13 @@ function GUI_util.set_slot_button(button, signal)
       GUI_util.get_localised_name(signal),
       "[/color][/font]",
     }
+    button.number = number
   else
     button.caption = GUI_util.format_amount(signal)
     button.style.natural_width = button.caption:len() * 12 + 4
     button.sprite = nil
     button.tooltip = {"gui.constant-number"}
+    button.number = nil
   end
 end
 

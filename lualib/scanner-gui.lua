@@ -642,11 +642,13 @@ function AreaScannerGUI.update_scanner_gui(gui)
   -- Update area dimensions
   local scan_area = scanner.settings.scan_area
   local input_flow = gui.children[1].children[2].children[2].children[1].children[2]
-  GUI_util.set_slot_button(input_flow.children[1].children[2], scan_area.x)
-  GUI_util.set_slot_button(input_flow.children[2].children[2], scan_area.y)
-  GUI_util.set_slot_button(input_flow.children[3].children[2], scan_area.width)
-  GUI_util.set_slot_button(input_flow.children[4].children[2], scan_area.height)
-  GUI_util.set_slot_button(input_flow.children[5].children[2], scan_area.filter)
+  local numbers = scanner.current
+  if not numbers then numbers = {} end
+  GUI_util.set_slot_button(input_flow.children[1].children[2], scan_area.x, numbers.x)
+  GUI_util.set_slot_button(input_flow.children[2].children[2], scan_area.y, numbers.y)
+  GUI_util.set_slot_button(input_flow.children[3].children[2], scan_area.width, numbers.width)
+  GUI_util.set_slot_button(input_flow.children[4].children[2], scan_area.height, numbers.height)
+  GUI_util.set_slot_button(input_flow.children[5].children[2], scan_area.filter, numbers.filter)
 
   -- Update minimap
   scan_area = scanner.current

@@ -1,6 +1,11 @@
 ---------------------------------------------------------------------------------------------------
-Version: 1.4.0
+Version: 1.4.1
 Date: ????
+  Changes:
+    - The scanner GUI now shows the value of the input signal.
+---------------------------------------------------------------------------------------------------
+Version: 1.4.0
+Date: 2024-10-28
   Major Features:
     - Initial port to Factorio 2.0
     - Added signal ("F">0) for "Super force building".

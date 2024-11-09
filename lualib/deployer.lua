@@ -65,13 +65,13 @@ function Deployer.deploy_blueprint(bp, deployer)
   -- Rotate
   local rotation = deployer.get_signal(ROTATE_SIGNAL, circuit_red, circuit_green)
   local direction = defines.direction.north
-  if (rotation == 1) then
+  if (rotation == 1) then ---@diagnostic disable: cast-local-type
     direction = defines.direction.east
   elseif (rotation == 2) then
     direction = defines.direction.south
   elseif (rotation == 3) then
     direction = defines.direction.west
-  end
+  end ---@diagnostic enable: cast-local-type
 
   local position = Deployer.get_target_position(deployer)
   if not position then return end
