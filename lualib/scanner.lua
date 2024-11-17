@@ -96,10 +96,20 @@ AreaScanner.FILTER_MASK_ORDER = {
   {group = "counters", name = "to_be_deconstructed"},
 }
 
+function AreaScanner.on_tick()
+  local f =  AreaScanner.on_tick_scanner
+  for i, s in pairs(storage.scanners) do
+    if s.entity.valid then
+      f(s)
+    else
+      AreaScanner.on_destroyed(i)
+    end
+  end
+end
+
 function AreaScanner.on_tick_scanner(scanner)
   local previous = scanner.previous
   if not scanner.network_imput and previous then return end
-  if not scanner.entity.valid then return end
   -- Copy values from circuit network to scanner
   local changed = false
   if previous then
@@ -141,6 +151,7 @@ function AreaScanner.on_built(entity, event)
     tags = {}
     tags.settings = util.table.deepcopy(storage.scanners[event.source.unit_number].settings)
   end
+  RB_util.clear_constant_combinator(entity.get_control_behavior())
   local scanner = AreaScanner.deserialize(entity, tags)
   script.register_on_object_destroyed(entity)
   AreaScanner.make_previous(scanner)
@@ -238,9 +249,8 @@ end
 function AreaScanner.on_destroyed(unit_number)
   local scanner = storage.scanners[unit_number]
   if scanner then
-    storage.scanners[unit_number] = nil
+    -- Remove opened scanner gui
     for _, player in pairs(game.players) do
-      -- Remove scanner gui
       if player.opened
       and player.opened.object_name == "LuaGuiElement"
       and player.opened.name == "recursive-blueprints-scanner"
@@ -248,7 +258,33 @@ function AreaScanner.on_destroyed(unit_number)
         AreaScannerGUI.destroy_gui(player.opened)
       end
     end
+    --Remove hidden io entity
+    if scanner.output_entity and scanner.output_entity.valid then
+      scanner.output_entity.destroy()
+    end
+    --Remove from list
+    storage.scanners[unit_number] = nil
   end
+end
+
+function AreaScanner.get_or_create_output_behavior(scanner)
+  local entity = scanner.entity
+  local b = scanner.output_entity
+  if not b or not b.valid then
+    b = entity.surface.create_entity{
+      name = "recursive-blueprints-hidden-io",
+      position = entity.position,
+      force = entity.force,
+      create_build_effect_smoke = false,
+    }
+    scanner.output_entity = b
+    local def = defines.wire_connector_id
+    local hidden_con = b.get_wire_connector(def.circuit_red, true)
+    hidden_con.connect_to(entity.get_wire_connector(def.circuit_red, true))
+    hidden_con = b.get_wire_connector(def.circuit_green, true)
+    hidden_con.connect_to(entity.get_wire_connector(def.circuit_green, true))
+  end
+  return b.get_control_behavior()
 end
 
 local function count_mineable(prototypes, source, dest, merge)
@@ -341,8 +377,8 @@ function AreaScanner.scan_resources(scanner)
                         + count_placeable(prototypes.tile, scans.ghost_tiles, result2, filters.show_ghosts)
 
   -- Copy resources to combinator output
-  local behavior = RB_util.clear_constant_combinator(scanner.entity.get_control_behavior())
-  if not behavior or not behavior.valid then return end
+  local behavior_section = RB_util.clear_constant_combinator(AreaScanner.get_or_create_output_behavior(scanner))
+  if not behavior_section or not behavior_section.valid then return end
   local index = 1
 
   -- Counters
@@ -357,7 +393,7 @@ function AreaScanner.scan_resources(scanner)
         if count > 2147483647 then count = 2147483647 end -- Avoid int32 overflow
         if count < -2147483648 then count = -2147483648 end
                                 ---@diagnostic disable-next-line: missing-fields
-        behavior.set_slot(index, {value=RB_util.get_signal_filter(signal), min=count})
+        behavior_section.set_slot(index, {value=RB_util.get_signal_filter(signal), min=count})
         index = index + 1
       end
     end
@@ -370,7 +406,7 @@ function AreaScanner.scan_resources(scanner)
         count = AreaScanner.check_scan_signal_collision(count, result2, signal)
         if count > 2147483647 then count = 2147483647 end
                                 ---@diagnostic disable-next-line: missing-fields
-        behavior.set_slot(index, {value=RB_util.get_signal_filter(signal), min=count})
+        behavior_section.set_slot(index, {value=RB_util.get_signal_filter(signal), min=count})
         index = index + 1
       end
     end
@@ -393,7 +429,7 @@ function AreaScanner.scan_resources(scanner)
   )
   for _, result in ipairs(result1) do
     --if index > 100 then break end
-    behavior.set_slot(index, result)
+    behavior_section.set_slot(index, result)
     index = index + 1
   end
 end

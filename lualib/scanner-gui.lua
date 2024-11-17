@@ -598,16 +598,18 @@ function AreaScannerGUI.reset_counter_settings(element)
 end
 
 -- Display all constant-combinator output signals in the gui
-function AreaScannerGUI.update_scanner_output(output_flow, entity)
+function AreaScannerGUI.update_scanner_output(output_flow, scanner)
   while #output_flow.children > 0 do output_flow.children[1].destroy() end
-  local behavior = entity.get_control_behavior().get_section(1)
-  if behavior then
-    local slots = behavior.filters_count
+  local output_behavior = AreaScanner.get_or_create_output_behavior(scanner)
+  if #output_behavior.sections < 1 then return end
+  local section = output_behavior.sections[1]
+  if section then
+    local slots = section.filters_count
     for i = 1, slots, 10 do
       local row = output_flow.add{type = "flow", style = "packed_horizontal_flow"}
       for j = 0, 9 do
         if i+j <= slots then
-          local signal = behavior.get_slot(i+j)
+          local signal = section.get_slot(i+j)
           if signal and signal.value and signal.value.name then
             row.add{
               type = "sprite-button",
@@ -661,7 +663,7 @@ function AreaScannerGUI.update_scanner_gui(gui)
   minimap.style.natural_width = s[1] / largest * 256
   minimap.style.natural_height = s[2] / largest * 256
 
-  AreaScannerGUI.update_scanner_output(gui.children[1].children[2].children[5].children[1], scanner.entity)
+  AreaScannerGUI.update_scanner_output(gui.children[1].children[2].children[5].children[1], scanner)
 
   if not gui.children[2].visible then return end
   local settings_lines = gui.children[2].children[2].children[2]

@@ -137,7 +137,7 @@ function RB_util.cache_rocks_names()
 end
 
 ---Delete all signals in constant combinator end return LuaLogisticSection if pissible.
----@param behavior LuaConstantCombinatorControlBehavior
+---@param behavior LuaControlBehavior|LuaConstantCombinatorControlBehavior|nil
 ---@return LuaLogisticSection|nil
 function RB_util.clear_constant_combinator(behavior)
   if not behavior or not behavior.valid then return nil end
@@ -167,6 +167,23 @@ function RB_util.warning_msgs(msg_i)
       game.print("Deployer automatic deconstruction is disabled due to the possibility of the game crash./nWaiting for fix. Latest checked version of Factorio 2.0.10")
     end
   end
+end
+
+function RB_util.check_verion(old, target)
+  local a1, b1, c1 = string.match(old, "(%d+).(%d+).(%d+)")
+  local a2, b2, c2 = string.match(target, "(%d+).(%d+).(%d+)")
+  local cmp = tonumber(a1) - tonumber(a2)
+  if cmp < 0 then
+    return true
+  elseif cmp == 0 then
+    cmp = tonumber(b1) - tonumber(b2)
+    if cmp < 0 then
+      return true
+    elseif cmp == 0 then
+      return tonumber(c1) < tonumber(c2)
+    end
+  end
+  return false
 end
 
 -->>DEPRICATET FUNCTIONS>>--

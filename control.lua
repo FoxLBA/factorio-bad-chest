@@ -14,11 +14,26 @@ local function init_caches()
   AreaScanner.mark_unknown_signals(AreaScanner.DEFAULT_SCANNER_SETTINGS)
 end
 
+local function dolly_moved_entity(event)
+  local entity = event.moved_entity ---@type LuaEntity
+  local scanner = storage.scanners[entity.unit_number]
+  if scanner and scanner.output_entity and scanner.output_entity.valid then
+    scanner.output_entity.teleport(entity.position)
+  end
+end
+
+local function register_events()
+  if remote.interfaces["PickerDollies"] and remote.interfaces["PickerDollies"]["dolly_moved_entity_id"] then
+    script.on_event(remote.call("PickerDollies", "dolly_moved_entity_id"), dolly_moved_entity)
+  end
+end
+
 local function on_init()
   storage.deployers = {}
   storage.scanners = {}
   storage.blueprints = {}
   init_caches()
+  register_events()
 end
 
 local function on_mods_changed(event)
@@ -39,14 +54,34 @@ local function on_mods_changed(event)
     end
   end
 
-  --Migrate to new scanner data format.
+  --Migrate to new scanner data format (changed in 1.3.11).
   if (event and event.mod_changes)
   and (event.mod_changes["rec-blue-plus"]
   and event.mod_changes["rec-blue-plus"].old_version) then
-    local a, b, c = string.match(event.mod_changes["rec-blue-plus"].old_version, "(%d+).(%d+).(%d+)")
-    if (tonumber(b) <= 3) and (tonumber(c) < 11) then
+    if RB_util.check_verion(event.mod_changes["rec-blue-plus"].old_version, "1.3.11") then
       for _, scanner in pairs(storage.scanners or {}) do
         AreaScanner.on_built(scanner.entity, {tags = scanner})
+      end
+    end
+  end
+
+  --Migrate to new scanner io (changed in 1.4.1).
+  if (event and event.mod_changes)
+  and (event.mod_changes["rec-blue-plus"]
+  and event.mod_changes["rec-blue-plus"].old_version) then
+    if RB_util.check_verion(event.mod_changes["rec-blue-plus"].old_version, "1.4.1") then
+      for i, scanner in pairs(storage.scanners or {}) do
+        local entity = scanner.entity
+        if entity.valid then
+          local old_behavior = entity.get_control_behavior()
+          local b = AreaScanner.get_or_create_output_behavior(scanner)
+          if (old_behavior.sections_count > 0) and (old_behavior.sections[1].filters_count > 0) then
+            b.sections[1].filters = old_behavior.sections[1].filters
+          end
+          RB_util.clear_constant_combinator(old_behavior)
+        else
+          AreaScanner.on_destroyed(i)
+        end
       end
     end
   end
@@ -95,10 +130,7 @@ local function on_tick()
   for _, deployer in pairs(storage.deployers) do
     deployer_tick(deployer)
   end
-  local scanner_tick = AreaScanner.on_tick_scanner
-  for _, scanner in pairs(storage.scanners) do
-    scanner_tick(scanner)
-  end
+  AreaScanner.on_tick()
 end
 
 local function on_built(event)
@@ -113,9 +145,10 @@ local function on_built(event)
 end
 
 local function on_object_destroyed(event)
-  if not event.unit_number then return end
-  AreaScanner.on_destroyed(event.unit_number)
-  Deployer.on_destroyed(event.unit_number)
+  if not event.useful_id then return end
+  if event.type ~= defines.target_type.entity then return end
+  AreaScanner.on_destroyed(event.useful_id)
+  Deployer.on_destroyed(event.useful_id)
 end
 
 local function on_player_setup_blueprint(event)
@@ -252,6 +285,7 @@ end
 
 -- Global events
 script.on_init(on_init)
+script.on_load(register_events)
 script.on_configuration_changed(on_mods_changed)
 ---@diagnostic disable: param-type-mismatch
 script.on_event(defines.events.on_tick, on_tick)
