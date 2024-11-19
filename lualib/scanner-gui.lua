@@ -611,18 +611,25 @@ function AreaScannerGUI.update_scanner_output(output_flow, scanner)
         if i+j <= slots then
           local signal = section.get_slot(i+j)
           if signal and signal.value and signal.value.name then
-            row.add{
+            local button = row.add{
               type = "sprite-button",
               style = "recursive-blueprints-output",
               number = signal.min,
               sprite = GUI_util.get_signal_sprite(signal.value),
-              tooltip = {"",
-                "[font=default-bold][color=255,230,192]",
-                GUI_util.get_localised_name(signal.value),
-                ":[/color][/font] ",
-                GUI_util.format_amount(signal.min),
-              }
+              elem_tooltip = RB_util.get_elem_from_signal(signal.value),
             }
+            local q = signal.value.quality
+            if q and storage.quality_levels[q] > 0 then
+              local q_flow = button.add{type = "flow"}
+              q_flow.style.vertical_align="bottom"
+              q_flow.style.size = 32
+              local q_sprite = q_flow.add{
+                type = "sprite",
+                sprite = "quality/".. q,
+              }
+              q_sprite.style.stretch_image_to_widget_size = true
+              q_sprite.style.size = 16
+            end
           else
             row.add{
               type = "sprite-button",

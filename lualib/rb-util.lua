@@ -136,6 +136,32 @@ function RB_util.cache_rocks_names()
   storage.rocks_names2 = rocks2
 end
 
+function RB_util.cache_quality_names()
+  local quality_names={}
+  local quality_levels={}
+  for name, q in pairs(prototypes.quality) do
+    table.insert(quality_names, name)
+    quality_levels[name] = q.level
+  end
+  storage.quality_names = quality_names
+  storage.quality_levels = quality_levels
+end
+
+function RB_util.get_quality_lists()
+  local a = {}
+  for _, n in pairs(storage.quality_names) do a[n] = {} end
+  return a
+end
+
+function RB_util.get_elem_from_signal(signal)
+  if signal.type == "item" then
+    return {type="item-with-quality", name=signal.name, quality=signal.quality or "normal"}
+  elseif signal.type == "virtual" then
+    return {type="signal", signal_type="virtual", name=signal.name}
+  end
+  return {type=signal.type, name=signal.name}
+end
+
 ---Delete all signals in constant combinator end return LuaLogisticSection if pissible.
 ---@param behavior LuaControlBehavior|LuaConstantCombinatorControlBehavior|nil
 ---@return LuaLogisticSection|nil
@@ -155,18 +181,7 @@ end
 ---@param signal table
 ---@return SignalFilter
 function RB_util.get_signal_filter(signal)
-  return {type=signal.type, name=signal.name, quality="normal", comparator="="}
-end
-
-function RB_util.warning_msgs(msg_i)
-  if (msg_i < 0) or (msg_i > 1) then return end
-  if not storage.arning_msg then storage.arning_msg = {} end
-  if (not storage.arning_msg[msg_i]) or (storage.arning_msg[msg_i] < (game.tick)) then
-    storage.arning_msg[msg_i] = game.tick + 10*60*60 --10min
-    if msg_i == 1 then
-      game.print("Deployer automatic deconstruction is disabled due to the possibility of the game crash./nWaiting for fix. Latest checked version of Factorio 2.0.10")
-    end
-  end
+  return {type=signal.type, name=signal.name, quality=signal.quality or "normal", comparator="="}
 end
 
 function RB_util.check_verion(old, target)

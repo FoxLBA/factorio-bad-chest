@@ -7,6 +7,7 @@ AreaScanner = require "lualib.scanner"
 
 local function init_caches()
   RB_util.cache_rocks_names()
+  RB_util.cache_quality_names()
   GUI_util.cache_signals()
   Deployer.cache_blueprint_signals()
   AreaScanner.cache_infinite_resources()
@@ -168,6 +169,7 @@ local function on_player_setup_blueprint(event)
     local mapping = event.mapping.get()
     for index, entity in pairs(mapping) do
       if entity and entity.name and entity.name == "recursive-blueprints-scanner" then
+        ---@diagnostic disable-next-line: param-type-mismatch
         bp.set_blueprint_entity_tags(index, AreaScanner.serialize(entity))
       end
     end

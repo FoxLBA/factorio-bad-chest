@@ -288,19 +288,21 @@ function AreaScanner.get_or_create_output_behavior(scanner)
 end
 
 local function count_mineable(prototypes, source, dest, merge)
+  --source[name]=count
+  --dest[type][quality][name]=count
   local counter = 0
   if merge then
     for name, count in pairs(source) do
       local m_p = prototypes[name].mineable_properties
       if m_p and m_p.minable and m_p.products then
         counter = counter + count
-        for _, product in pairs(m_p.products) do
-          local amount = product.amount
-          if product.amount_min and product.amount_max then
-            amount = (product.amount_min + product.amount_max) / 2
-            amount = amount * product.probability
+        for _, p in pairs(m_p.products) do
+          local amount = p.amount
+          if p.amount_min and p.amount_max then
+            amount = (p.amount_min + p.amount_max) / 2
+            amount = amount * p.probability
           end
-          dest[product.type][product.name] = (dest[product.type][product.name] or 0) + (amount or 0) * count
+          dest[p.type]["normal"][p.name] = (dest[p.type]["normal"][p.name] or 0) + (amount or 0) * count
         end
       end
     end
@@ -316,21 +318,28 @@ local function count_mineable(prototypes, source, dest, merge)
 end
 
 local function count_placeable(prototypes, source, dest, merge)
+  --source[quality][name]=count
+  --dest[type][quality][name]=count
+  if not source then return 0 end
   local counter = 0
   if merge then
-    for name, count in pairs(source) do
-      local itpt = prototypes[name].items_to_place_this
-      if itpt and (#itpt > 0) then
-        counter = counter + count
-        local i_name = itpt[1].name
-        dest.item[i_name] = (dest.item[i_name] or 0) + (itpt[1].count or 0) * count
+    for q, q_list in pairs(source) do
+      for name, count in pairs(q_list) do
+        local itpt = prototypes[name].items_to_place_this
+        if itpt and (#itpt > 0) then
+          counter = counter + count
+          local i_name = itpt[1].name
+          dest.item[q][i_name] = (dest.item[q][i_name] or 0) + (itpt[1].count or 0) * count
+        end
       end
     end
   else
-    for name, count in pairs(source) do
-      local itpt = prototypes[name].items_to_place_this
-      if itpt and (#itpt > 0) then
-        counter = counter + count
+    for _, q_list in pairs(source) do
+      for name, count in pairs(q_list) do
+        local itpt = prototypes[name].items_to_place_this
+        if itpt and (#itpt > 0) then
+          counter = counter + count
+        end
       end
     end
   end
@@ -346,35 +355,50 @@ function AreaScanner.scan_resources(scanner)
   local surface = scanner.entity.surface
   local scan_area_settings = scanner.current
   local scan_area = AreaScanner.get_scan_area(scanner.entity.position, scan_area_settings)
+  local filter = scan_area_settings.filter --Refer to AreaScanner.FILTER_MASK_ORDER to understand the meaning of bitmasks.
 
   local areas, uncharted = RB_util.find_charted_areas(force, surface, scan_area)
   local scans -- See the description of AreaScanner.scan_area
   if #areas == 1 then --Both scanning functions must be consistent!
-    scans = AreaScanner.scan_area_no_hash(surface, areas[1], force, scan_area_settings.filter)
+    scans = AreaScanner.scan_area_no_hash(surface, areas[1], force, filter)
   else
-    scans = AreaScanner.scan_area(surface, areas, force, scan_area_settings.filter)
+    scans = AreaScanner.scan_area(surface, areas, force, filter)
   end
 
-  local scanner_settings = scanner.settings
-  local filters = scanner_settings.filters
-  local counters = scanner_settings.counters
   scans.counters.uncharted = uncharted
-  if counters.water.is_shown then
+  local band = bit32.band
+  if band(filter, 512) > 0 then --water
     local water = 0
     for _, area in pairs(areas)do
-      water = water + surface.count_tiles_filtered{area = area, collision_mask = "water_tile"}
+      local a = table.deepcopy(area)
+      RB_util.area_shrink_1_pixel(a)
+      water = water + surface.count_tiles_filtered{area = a, collision_mask = "water_tile"}
     end
     scans.counters.water = water
   end
+  if band(filter, 4112) > 0 then --ghost_tiles
+    local t = RB_util.get_quality_lists()
+    for _, area in pairs(areas)do
+      local a = table.deepcopy(area)
+      RB_util.area_shrink_1_pixel(a)
+      for _, entity in pairs(surface.find_entities_filtered{area = a, force = force, name = "tile-ghost"}) do
+        local n = entity.ghost_name
+        local q = entity.quality.name
+        t[q][n] = (t[q][n] or 0) + 1
+      end
+    end
+    scans.ghost_tiles = t
+  end
 
-  local result1 = {item = {}, fluid = {}, virtual = {}} -- counters, ore, trees, rocks, fish
-  local result2 = {item = {}, fluid = {}, virtual = {}} -- buildings, ghosts, items on ground
-  if filters.show_resources then count_mineable(prototypes.entity, scans.resources, result1, true) end
-  scans.counters.trees_and_rocks = count_mineable(prototypes.entity, scans.environment, result1, filters.show_environment)
-  if filters.show_items_on_ground then result2.item = scans.items_on_ground end
-  scans.counters.buildings = count_placeable(prototypes.entity, scans.buildings, result2, filters.show_buildings)
-  scans.counters.ghosts = count_placeable(prototypes.entity, scans.ghosts, result2, filters.show_ghosts)
-                        + count_placeable(prototypes.tile, scans.ghost_tiles, result2, filters.show_ghosts)
+  local ql = RB_util.get_quality_lists
+  local result1 = {item = ql(), fluid = ql(), virtual = ql()} -- counters, ore, trees, rocks, fish
+  local result2 = {item = ql(), fluid = ql(), virtual = ql()} -- buildings, ghosts, items on ground
+  if band(filter, 2) > 0 then count_mineable(prototypes.entity, scans.resources, result1, true) end --show_resources
+  scans.counters.trees_and_rocks = count_mineable(prototypes.entity, scans.environment, result1, (band(filter, 16388) > 0)) --show_environment
+  if band(filter, 8224) > 0 then result2.item = scans.items_on_ground end --show_items_on_ground
+  scans.counters.buildings = count_placeable(prototypes.entity, scans.buildings, result2, (band(filter, 2056) > 0)) --show_buildings
+  scans.counters.ghosts = count_placeable(prototypes.entity, scans.ghosts, result2, (band(filter, 4112) > 0))
+                        + count_placeable(prototypes.tile, scans.ghost_tiles, result2, (band(filter, 4112) > 0)) --show_ghosts
 
   -- Copy resources to combinator output
   local behavior_section = RB_util.clear_constant_combinator(AreaScanner.get_or_create_output_behavior(scanner))
@@ -382,48 +406,62 @@ function AreaScanner.scan_resources(scanner)
   local index = 1
 
   -- Counters
+  local counters = scanner.settings.counters
   for name, counter_setting in pairs(counters) do
     local signal = counter_setting.signal
     if counter_setting.is_shown and signal then
       local count = scans.counters[name]
       if count and count ~= 0 then
+        signal.quality = "normal"
+        signal.comparator = "="
         if counter_setting.is_negative then count = -count end
         count = AreaScanner.check_scan_signal_collision(count, result1, signal)
         count = AreaScanner.check_scan_signal_collision(count, result2, signal)
         if count > 2147483647 then count = 2147483647 end -- Avoid int32 overflow
         if count < -2147483648 then count = -2147483648 end
                                 ---@diagnostic disable-next-line: missing-fields
-        behavior_section.set_slot(index, {value=RB_util.get_signal_filter(signal), min=count})
+        behavior_section.set_slot(index, {value=signal, min=count})
         index = index + 1
       end
     end
   end
   -- ore, trees, rocks, fish
-  for type, result in pairs(result1) do
-    for name, count in pairs(result) do ---@cast name string
-      if count ~= 0 then
-        local signal = {type = type, name = name}
-        count = AreaScanner.check_scan_signal_collision(count, result2, signal)
-        if count > 2147483647 then count = 2147483647 end
-                                ---@diagnostic disable-next-line: missing-fields
-        behavior_section.set_slot(index, {value=RB_util.get_signal_filter(signal), min=count})
-        index = index + 1
+  for t, t_list in pairs(result1) do
+    for q, q_list in pairs(t_list) do
+      for n, count in pairs(q_list) do
+        if count ~= 0 then
+          local signal = {type=t, name=n, quality=q, comparator="="}
+          count = AreaScanner.check_scan_signal_collision(count, result2, signal)
+          if count > 2147483647 then count = 2147483647 end
+                    ---@diagnostic disable-next-line: missing-fields
+          behavior_section.set_slot(index, {value=signal, min=count})
+          index = index + 1
+        end
       end
     end
   end
+
   -- buildings, ghosts, items on ground
   result1 = {}
-  for type, result in pairs(result2) do
-    for name, count in pairs(result) do
-      if count ~= 0 then
-        if count > 2147483647 then count = 2147483647 end
-        table.insert(result1, {value=RB_util.get_signal_filter({type=type, name=name}), min=count})
+  for t, t_list in pairs(result2) do
+    for q, q_list in pairs(t_list) do
+      for n, c in pairs(q_list) do
+        if c ~= 0 then
+          if c > 2147483647 then c = 2147483647 end
+          table.insert(result1, {value={type=t, name=n, quality=q, comparator="="}, min=c})
+        end
       end
     end
   end
+  local qlv = storage.quality_levels
   table.sort(result1,
     function(s1, s2)
-      if s1.min == s2.min then return s1.value.name < s2.value.name end
+      if s1.min == s2.min then
+        if s1.value.name == s2.value.name then
+          return qlv[s1.value.quality] < qlv[s2.value.quality]
+        end
+        return s1.value.name < s2.value.name
+      end
       return s1.min > s2.min
     end
   )
@@ -435,9 +473,9 @@ function AreaScanner.scan_resources(scanner)
 end
 
 function AreaScanner.check_scan_signal_collision(count, result, signal)
-  if result[signal.type][signal.name] then
-    count = count + result[signal.type][signal.name]
-    result[signal.type][signal.name] = nil
+  if result[signal.type][signal.quality][signal.name] then
+    count = count + result[signal.type][signal.quality][signal.name]
+    result[signal.type][signal.quality][signal.name] = nil
   end
   return count
 end
@@ -469,12 +507,12 @@ end
 -- Output:
 --[[
   scans = {
-    resources = {[entity_name] = 0, ...},
-    environment = {[entity_name] = 0, ...},
-    buildings = {[entity_name] = 0, ...},
-    ghosts = {[entity_name] = 0, ...},
-    ghost_tiles = {[entity_name] = 0, ...},
-    items_on_ground = {[entity_name] = 0, ...},
+    resources[entity_name] = 0,
+    environment[entity_name] = 0,
+          buildings[quality_name][entity_name] = 0,
+             ghosts[quality_name][entity_name] = 0,
+        ghost_tiles[quality_name][entity_name] = 0, -- It is added outside of this function because it counts tiles.
+    items_on_ground[quality_name][entity_name] = 0,
     counters = {
       uncharted = 0, -- It is added outside of this function because it counts chunks.
       cliffs = 0,
@@ -491,14 +529,14 @@ end
 ]]
 function AreaScanner.scan_area(surface, areas, scanner_force, filter)
   local band = bit32.band
+  local ql = RB_util.get_quality_lists
   local ROCKS = storage.rocks_names2
   local INFINITE_RESOURCES = storage.infinite_resources
   local resources = {}
   local environment = {}
-  local buildings = {}
-  local ghosts = {}
-  local ghost_tiles = {}
-  local items_on_ground = {}
+  local buildings = ql()
+  local ghosts = ql()
+  local items_on_ground = ql()
   local counters = {resources = 0, cliffs = 0, items_on_ground = 0, to_be_deconstructed = 0, targets = 0}
 
   if band(filter, 1026) > 0 then -- Ore
@@ -550,11 +588,12 @@ function AreaScanner.scan_area(surface, areas, scanner_force, filter)
     local blacklist = {}
     for _, area in pairs(areas) do
       for _, entity in pairs(surface.find_entities_filtered{area = area, force = get_forces_exept(scanner_force), name = "entity-ghost", invert=true}) do
-        local e_name = entity.name
-        local e_pos  = entity.position
-        local hash = e_name .. "_" .. e_pos.x .. "_" .. e_pos.y
+        local n = entity.name
+        local p  = entity.position
+        local hash = n .. "_" .. p.x .. "_" .. p.y
         if not blacklist[hash] then
-          buildings[e_name] = (buildings[e_name] or 0) + 1
+          local q = entity.quality.name
+          buildings[q][n] = (buildings[q][n] or 0) + 1
           blacklist[hash] = true
         end
       end
@@ -565,19 +604,14 @@ function AreaScanner.scan_area(surface, areas, scanner_force, filter)
     local blacklist = {}
     for _, area in pairs(areas) do
       for _, entity in pairs(surface.find_entities_filtered{area = area, force = scanner_force, name = "entity-ghost"}) do
-        local e_name = entity.ghost_name
-        local e_pos  = entity.position
-        local hash = e_name .. "_" .. e_pos.x .. "_" .. e_pos.y
+        local n = entity.ghost_name
+        local p  = entity.position
+        local hash = n .. "_" .. p.x .. "_" .. p.y
         if not blacklist[hash] then
-          ghosts[e_name] = (ghosts[e_name] or 0) + 1
+          local q = entity.quality.name
+          ghosts[q][n] = (ghosts[q][n] or 0) + 1
           blacklist[hash] = true
         end
-      end
-      local a = table.deepcopy(area)
-      RB_util.area_shrink_1_pixel(a)
-      for _, entity in pairs(surface.find_entities_filtered{area = a, force = scanner_force, name = "tile-ghost"}) do
-        local ghost_name = entity.ghost_name
-        ghost_tiles[ghost_name] = (ghost_tiles[ghost_name] or 0) + 1
       end
     end
   end -- Ghosts
@@ -603,11 +637,12 @@ function AreaScanner.scan_area(surface, areas, scanner_force, filter)
     local count = 0
     for _, area in pairs(areas) do
       for _, entity in pairs(surface.find_entities_filtered{area = area, type = "item-entity"}) do
-        local e_pos  = entity.position
-        local hash = entity.name .. "_" .. e_pos.x .. "_" .. e_pos.y
+        local p  = entity.position
+        local hash = entity.name .. "_" .. p.x .. "_" .. p.y
         if not blacklist[hash] then
-          local stack = entity.stack
-          items_on_ground[stack.name] = (items_on_ground[stack.name] or 0) + stack.count
+          local s = entity.stack
+          local q = s.quality.name
+          items_on_ground[q][s.name] = (items_on_ground[q][s.name] or 0) + s.count
           count = count + 1
           blacklist[hash] = true
         end
@@ -651,20 +686,20 @@ function AreaScanner.scan_area(surface, areas, scanner_force, filter)
     end
   end -- Enemy base
 
-  return {resources = resources, environment = environment, buildings = buildings, ghosts = ghosts, ghost_tiles = ghost_tiles, items_on_ground = items_on_ground, counters = counters}
+  return {resources = resources, environment = environment, buildings = buildings, ghosts = ghosts, items_on_ground = items_on_ground, counters = counters}
 end
 
 -- Almost a complete copy of "AreaScanner.scan_area()"
 function AreaScanner.scan_area_no_hash(surface, area, scanner_force, filter)
   local band = bit32.band
+  local ql = RB_util.get_quality_lists
   local ROCKS = storage.rocks_names2
   local INFINITE_RESOURCES = storage.infinite_resources
   local resources = {}
   local environment = {}
-  local buildings = {}
-  local ghosts = {}
-  local ghost_tiles = {}
-  local items_on_ground = {}
+  local buildings = ql()
+  local ghosts = ql()
+  local items_on_ground = ql()
   local counters = {resources = 0, cliffs = 0, items_on_ground = 0, to_be_deconstructed = 0, targets = 0}
 
   if band(filter, 2) > 0 then -- Ore
@@ -693,21 +728,17 @@ function AreaScanner.scan_area_no_hash(surface, area, scanner_force, filter)
 
   if band(filter, 2056) > 0 then -- Buildings
     for _, entity in pairs(surface.find_entities_filtered{area = area, force = get_forces_exept(scanner_force), name = "entity-ghost", invert=true}) do
-      local e_name = entity.name
-      buildings[e_name] = (buildings[e_name] or 0) + 1
+      local n = entity.name
+      local q = entity.quality.name
+      buildings[q][n] = (buildings[q][n] or 0) + 1
     end
   end -- Buildings
 
   if band(filter, 4112) > 0 then -- Ghosts
     for _, entity in pairs(surface.find_entities_filtered{area = area, force = scanner_force, name = "entity-ghost"}) do
-      local ghost_name = entity.ghost_name
-      ghosts[ghost_name] = (ghosts[ghost_name] or 0) + 1
-    end
-    local a = table.deepcopy(area)
-    RB_util.area_shrink_1_pixel(a)
-    for _, entity in pairs(surface.find_entities_filtered{area = a, force = scanner_force, name = "tile-ghost"}) do
-      local ghost_name = entity.ghost_name
-      ghost_tiles[ghost_name] = (ghost_tiles[ghost_name] or 0) + 1
+      local n = entity.ghost_name
+      local q = entity.quality.name
+        ghosts[q][n] = (ghosts[q][n] or 0) + 1
     end
   end -- Ghosts
 
@@ -718,8 +749,9 @@ function AreaScanner.scan_area_no_hash(surface, area, scanner_force, filter)
   if band(filter, 8224) > 0 then -- Items on ground
     local count = 0
     for _, entity in pairs(surface.find_entities_filtered{area = area, type = "item-entity"}) do
-      local stack = entity.stack
-      items_on_ground[stack.name] = (items_on_ground[stack.name] or 0) + stack.count
+      local s = entity.stack
+      local q = s.quality.name
+      items_on_ground[q][s.name] = (items_on_ground[q][s.name] or 0) + s.count
       count = count + 1
     end
     counters.items_on_ground = count
@@ -736,7 +768,7 @@ function AreaScanner.scan_area_no_hash(surface, area, scanner_force, filter)
     end
   end -- Enemy base
 
-  return {resources = resources, environment = environment, buildings = buildings, ghosts = ghosts, ghost_tiles = ghost_tiles, items_on_ground = items_on_ground, counters = counters}
+  return {resources = resources, environment = environment, buildings = buildings, ghosts = ghosts, items_on_ground = items_on_ground, counters = counters}
 end
 
 -- Out of bounds check.
