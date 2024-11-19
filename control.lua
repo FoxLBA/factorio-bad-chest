@@ -127,10 +127,7 @@ local function on_setting_changed(event)
 end
 
 local function on_tick()
-  local deployer_tick = Deployer.on_tick_deployer
-  for _, deployer in pairs(storage.deployers) do
-    deployer_tick(deployer)
-  end
+  Deployer.on_tick()
   AreaScanner.on_tick()
 end
 

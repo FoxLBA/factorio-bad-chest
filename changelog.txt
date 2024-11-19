@@ -1,8 +1,8 @@
 ---------------------------------------------------------------------------------------------------
 Version: 1.4.1
-Date: ????
+Date: 2024-11-19
   Features:
-    - The scanner can now see quality of buildings, ghosts and items on ground.
+    - The scanner can now see quality of buildings, ghosts and items on the ground.
   Changes:
     - The scanner GUI now shows the value of the input signal.
     - The scanner now uses a hidden entity to emit signals.

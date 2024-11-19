@@ -20,6 +20,17 @@ for i = 1, 5 do
     )
 end
 
+function Deployer.on_tick()
+  local f =  Deployer.on_tick_deployer
+  for i, s in pairs(storage.deployers) do
+    if s.valid then
+      f(s)
+    else
+      Deployer.on_destroyed(i)
+    end
+  end
+end
+
 function Deployer.on_built(entity)
   storage.deployers[entity.unit_number] = entity
   script.register_on_object_destroyed(entity)
@@ -264,7 +275,6 @@ function Deployer.signal_filtred_deconstruction(deployer, deconstruct, whitelist
 end
 
 function Deployer.on_tick_deployer(deployer)
-  if not deployer.valid then return end
   -- Read deploy signal
   local get_signal = deployer.get_signal
   local deploy = read_deploy_signal(get_signal)
