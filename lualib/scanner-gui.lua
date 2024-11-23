@@ -145,7 +145,7 @@ function AreaScannerGUI.create_scanner_gui(player, entity)
     --horizontal_scroll_policy = "never",
     --vertical_scroll_policy = "auto",
   }
-  for name, _ in pairs(scanner.settings.counters) do
+  for name, _ in pairs(AreaScanner.get_list_from_filter(0).counters) do
     AreaScannerGUI.add_counter_setting_line(settings_lines, name)
   end
 
@@ -176,17 +176,19 @@ function AreaScannerGUI.add_counter_setting_line(element, name)
   flow.add{
     type = "checkbox", state = false, style = "recursive-blueprints-checkbox-minus",
     name = "recursive-blueprints-counter-checkbox",
-    tooltip = {"recursive-blueprints.counter-negative-checkbox"}
+    tooltip = {"recursive-blueprints.counter-negative-checkbox"},
+    enabled = false,
   }
   flow.add{
     type = "sprite-button", style = "recursive-blueprints-slot",
     name = "recursive-blueprints-signal-select-button",
-    tags = {type = "output", name = name}
+    tags = {type = "output", name = name},
+    enabled = false,
   }
   flow.add{
     type = "label",
     caption = {"recursive-blueprints.counter-name-"..name},
-    tooltip = {"recursive-blueprints.counter-tooltip-"..name}
+    tooltip = {"recursive-blueprints.counter-tooltip-"..name},
   }
 end
 
@@ -197,8 +199,11 @@ function AreaScannerGUI.create_signal_gui(element)
   local primary_gui = screen["recursive-blueprints-scanner"]
   local id = primary_gui.tags["recursive-blueprints-id"]
   local scanner = storage.scanners[id]
+  local settings = scanner.settings or AreaScanner.DEFAULT_SCANNER_SETTINGS
+  local scan_area = settings.scan_area or AreaScanner.DEFAULT_SCANNER_SETTINGS.scan_area
   local field = element.tags.name
   local field_type = element.tags.type
+  local filter_calc = field == "filter" and (not scanner.settings or not scanner.settings.scan_area)
 
   -- Highlight the button that opened the gui
   AreaScannerGUI.reset_scanner_gui_style(screen)
@@ -218,10 +223,11 @@ function AreaScannerGUI.create_signal_gui(element)
   -- Find the previously selected signal.
   local target = {}
   if field_type == "input" then
-    local v = scanner.settings.scan_area[field]
+    local v = scan_area[field]
     if type(v) == "table" then target = v end
   else
-    target = scanner.settings.counters[field].signal
+    local c = settings.counters or AreaScanner.DEFAULT_SCANNER_SETTINGS.counters
+    target = c[field].signal
   end
 
   -- Heading
@@ -239,7 +245,7 @@ function AreaScannerGUI.create_signal_gui(element)
     }
   }
   gui.location = location
-  local signal_select = gui.add{type = "frame", direction = "vertical"}
+  local signal_select = gui.add{type = "frame", direction = "vertical", visible = not filter_calc}
   GUI_util.add_titlebar(signal_select, gui, {"gui.select-signal"}, "recursive-blueprints-close")
   GUI_util.add_signal_select_frame(signal_select, target)
 
@@ -276,10 +282,10 @@ function AreaScannerGUI.create_signal_gui(element)
     }
     textfield.style.width = 80
     textfield.style.horizontal_align = "center"
-    if type(scanner.settings.scan_area[field]) == "table" then
+    if type(scan_area[field]) == "table" then
       textfield.text = "0"
     else
-      textfield.text = tostring(scanner.settings.scan_area[field])
+      textfield.text = tostring(scan_area[field])
     end
     AreaScannerGUI.copy_text_value(textfield)
 
@@ -295,7 +301,11 @@ function AreaScannerGUI.create_signal_gui(element)
 
   elseif field == "filter" then
     local set_filter = gui.add{type = "frame", direction = "vertical"}
-    GUI_util.add_titlebar(set_filter, gui, {"gui.or-set-a-constant"})
+    if filter_calc then
+      GUI_util.add_titlebar(set_filter, gui, {""}, "recursive-blueprints-close")
+    else
+      GUI_util.add_titlebar(set_filter, gui, {"gui.or-set-a-constant"})
+    end
     local inner_frame = set_filter.add{type = "frame", style = "entity_frame", direction = "vertical"}
     inner_frame.style.minimal_width = 0
     local options_flow = inner_frame.add{type = "flow", direction = "horizontal"}
@@ -314,6 +324,7 @@ function AreaScannerGUI.create_signal_gui(element)
       caption = {"recursive-blueprints.heading_label-counters"}
     }
 
+    local filter_list = AreaScanner.get_list_from_filter(scanner.current.filter)
     for _, setting in pairs(AreaScanner.FILTER_MASK_ORDER) do
       if setting.group == "filters" then
         local name = setting.name
@@ -321,7 +332,7 @@ function AreaScannerGUI.create_signal_gui(element)
         if name == "blank" then tooltip = {"recursive-blueprints.counter-tooltip-blank"} end
         filters_flow.add{
           type = "checkbox",
-          state = scanner.settings.filters[name] or false,
+          state = filter_list.filters[name] or false,
           caption = {"recursive-blueprints.counter-name-"..AreaScannerGUI.FILTER_NANES[name]},
           tooltip = tooltip,
           tags = {
@@ -333,7 +344,7 @@ function AreaScannerGUI.create_signal_gui(element)
         local name = setting.name
         counters_flow.add{
           type = "checkbox",
-          state = scanner.settings.counters[name].is_shown,
+          state = filter_list.counters[name] or false,
           caption = {"recursive-blueprints.counter-name-"..name},
           tooltip = {"recursive-blueprints.counter-tooltip-"..name},
           tags = {
@@ -355,15 +366,17 @@ function AreaScannerGUI.create_signal_gui(element)
     }
     textfield.style.width = 100
     textfield.style.horizontal_align = "center"
-    textfield.text = tostring(AreaScanner.get_filter_mask(scanner.settings))
+    textfield.text = tostring(scanner.current.filter)
     -- Submit button
+    local cap = {"gui.set"}
+    if filter_calc then cap = {"gui.cancel"} end
     local filler = filter_end_line.add{type = "empty-widget"}
     filler.style.horizontally_stretchable = true
     filter_end_line.add{
       type = "button",
       style = "recursive-blueprints-set-button",
       name = "recursive-blueprints-set-constant",
-      caption = {"gui.set"},
+      caption = cap,
     }
   end
 
@@ -405,6 +418,12 @@ function AreaScannerGUI.set_scanner_value(element)
   local signal_gui = screen["recursive-blueprints-signal"]
   local key = signal_gui.tags["recursive-blueprints-field"]
   if signal_gui.tags["recursive-blueprints-type"] ~= "input" then return end
+  if not scanner.settings or not scanner.settings.scan_area then
+    AreaScannerGUI.update_scanner_gui(scanner_gui)
+    AreaScannerGUI.reset_scanner_gui_style(screen)
+    signal_gui.destroy()
+    return
+  end
 
   local value = tonumber(element.parent.children[2].text) or 0
   value = AreaScanner.sanitize_area(key, value)
@@ -415,9 +434,6 @@ function AreaScannerGUI.set_scanner_value(element)
   if scanner.previous[key] ~= value then
     scanner.previous[key] = value
     scanner.current[key] = value
-    if key == "filter" then
-      AreaScanner.set_filter_mask(scanner.settings, value)
-    end
     AreaScanner.scan_resources(scanner)
   end
 
@@ -437,14 +453,21 @@ function AreaScannerGUI.set_scanner_signal(element)
   local scanner_gui = screen["recursive-blueprints-scanner"]
   if not scanner_gui then return end
   local scanner = storage.scanners[scanner_gui.tags["recursive-blueprints-id"]]
+  local settings = scanner.settings
+  if not settings then
+    AreaScannerGUI.update_scanner_gui(scanner_gui)
+    AreaScannerGUI.reset_scanner_gui_style(screen)
+    signal_gui.destroy()
+    return
+  end
   local key = signal_gui.tags["recursive-blueprints-field"]
   local key_type = signal_gui.tags["recursive-blueprints-type"]
 
-  if key_type == "input" then
-    scanner.settings.scan_area[key] = element.tags["recursive-blueprints-signal"]
+  if key_type == "input" and settings.scan_area then
+    settings.scan_area[key] = element.tags["recursive-blueprints-signal"]
     scanner.network_imput = true
-  else
-    scanner.settings.counters[key].signal = element.tags["recursive-blueprints-signal"]
+  elseif settings.counters then
+    settings.counters[key].signal = element.tags["recursive-blueprints-signal"]
     AreaScanner.scan_resources(scanner)
   end
   AreaScannerGUI.update_scanner_gui(scanner_gui)
@@ -535,36 +558,23 @@ function AreaScannerGUI.copy_filter_value(element)
       if c_element.type == "checkbox" then
         local f_type = c_element.tags["recursive-blueprints-filter-checkbox-type"]
         local f_name = c_element.tags["recursive-blueprints-filter-checkbox-field"]
-        if f_type == "filters" then
-          settings[f_type][f_name] = c_element.state
-        else
-          settings[f_type][f_name] = {is_shown = c_element.state}
-        end
+        settings[f_type][f_name] = c_element.state
       end
     end
   end
   local textfield = element.parent.parent.parent.children[2].children[2]
-  textfield.text = tostring(AreaScanner.get_filter_mask(settings))
+  textfield.text = tostring(AreaScanner.get_filter_from_list(settings))
 end
 
 -- Copy value from text field to filter checkboxes
 function AreaScannerGUI.copy_filter_text_value(element)
-  local settings = {filters = {}, counters = {}}
-  for name, _ in pairs(AreaScanner.DEFAULT_SCANNER_SETTINGS.counters) do
-    settings.counters[name] = {}
-  end
-  local text_value = tonumber(element.text) or 0
-  AreaScanner.set_filter_mask(settings, text_value)
+  local f_list = AreaScanner.get_list_from_filter(tonumber(element.text) or 0)
   for _, flow in pairs(element.parent.parent.children[1].children) do
     for _, c_element in pairs(flow.children) do
       if c_element.type == "checkbox" then
         local f_type = c_element.tags["recursive-blueprints-filter-checkbox-type"]
         local f_name = c_element.tags["recursive-blueprints-filter-checkbox-field"]
-        if f_type == "filters" then
-          c_element.state = settings[f_type][f_name]
-        else
-          c_element.state = settings[f_type][f_name].is_shown
-        end
+        c_element.state = f_list[f_type][f_name]
       end
     end
   end
@@ -589,10 +599,14 @@ end
 function AreaScannerGUI.reset_counter_settings(element)
   local scanner_gui = GUI_util.get_root_element(element)
   local scanner = storage.scanners[scanner_gui.tags["recursive-blueprints-id"]]
+  if not scanner.settings then return end
+  scanner.settings.counters = nil
+  --[[
   for name, counter in pairs(AreaScanner.DEFAULT_SCANNER_SETTINGS.counters) do
     scanner.settings.counters[name].is_negative = counter.is_negative
-    scanner.settings.counters[name].signal = {type = counter.signal.type, name = counter.signal.name}
+    scanner.settings.counters[name].signal = {type = counter.signal.type, name = counter.signal.name, quality="normal", comparator="="}
   end
+  ]]
   AreaScanner.scan_resources(scanner)
   AreaScannerGUI.update_scanner_gui(scanner_gui)
 end
@@ -649,7 +663,8 @@ function AreaScannerGUI.update_scanner_gui(gui)
   if not scanner.entity.valid then return end
 
   -- Update area dimensions
-  local scan_area = scanner.settings.scan_area
+  local settings = scanner.settings or AreaScanner.DEFAULT_SCANNER_SETTINGS
+  local scan_area = settings.scan_area or AreaScanner.DEFAULT_SCANNER_SETTINGS.scan_area
   local input_flow = gui.children[1].children[2].children[2].children[1].children[2]
   local numbers = scanner.current
   if not numbers then numbers = {} end
@@ -658,6 +673,10 @@ function AreaScannerGUI.update_scanner_gui(gui)
   GUI_util.set_slot_button(input_flow.children[3].children[2], scan_area.width, numbers.width)
   GUI_util.set_slot_button(input_flow.children[4].children[2], scan_area.height, numbers.height)
   GUI_util.set_slot_button(input_flow.children[5].children[2], scan_area.filter, numbers.filter)
+
+  if not scanner.settings or not scanner.settings.scan_area then
+    for i=1, 4 do input_flow.children[i].children[2].enabled = false end
+  end
 
   -- Update minimap
   scan_area = scanner.current
@@ -674,10 +693,11 @@ function AreaScannerGUI.update_scanner_gui(gui)
 
   if not gui.children[2].visible then return end
   local settings_lines = gui.children[2].children[2].children[2]
+  local counters = settings.counters or AreaScanner.DEFAULT_SCANNER_SETTINGS.counters
   for i = 1, #settings_lines.children do
     local sprite_button = settings_lines.children[i].children[2]
-    GUI_util.set_slot_button(sprite_button, scanner.settings.counters[sprite_button.tags.name].signal)
-    settings_lines.children[i].children[1].state = scanner.settings.counters[sprite_button.tags.name].is_negative
+    GUI_util.set_slot_button(sprite_button, counters[sprite_button.tags.name].signal)
+    settings_lines.children[i].children[1].state = counters[sprite_button.tags.name].is_negative or false
   end
 end
 

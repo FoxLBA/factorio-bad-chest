@@ -16,7 +16,7 @@ local OLD_SCANNER_SETTINGS = {
     y = 0,
     width = 64,
     height = 64,
-    filter = 0
+    filter = 966,
   },
   filters = {
     blank = false,
@@ -40,37 +40,33 @@ local OLD_SCANNER_SETTINGS = {
   }
 }
 
+local function virtual_signal(name)
+  return {name=name, type="virtual", quality="normal", comparator="="}
+end
+
 local NEW_SCANNER_SETTINGS = {
   version = {
     mod_name = script.mod_name,
     version = script.active_mods[script.mod_name]
   },
   scan_area = { --number or signal
-    x = {name="signal-X", type="virtual"},
-    y = {name="signal-Y", type="virtual"},
-    width = {name="signal-W", type="virtual"},
-    height = {name="signal-H", type="virtual"},
-    filter = {name="signal-F", type="virtual"}
-  },
-  filters = {
-    blank = false,
-    show_resources = true,
-    show_environment = true, -- trees, rocks, fish
-    show_buildings = false,
-    show_ghosts = false,
-    show_items_on_ground = false,
+    x = virtual_signal("signal-X"),
+    y = virtual_signal("signal-Y"),
+    width = virtual_signal("signal-W"),
+    height = virtual_signal("signal-H"),
+    filter = virtual_signal("signal-F"),
   },
   counters = {
-    uncharted   = {is_shown = true, signal = {name="signal-black", type="virtual"}, is_negative = false},
-    cliffs      = {is_shown = true, signal = {name="signal-C", type="virtual"}, is_negative = false},
-    targets     = {is_shown = true, signal = {name="signal-E", type="virtual"}, is_negative = false},
-    water       = {is_shown = true, signal = {name="signal-L", type="virtual"}, is_negative = false},
-    resources   = {is_shown = false, signal = {name="signal-O", type="virtual"}, is_negative = false},
-    buildings   = {is_shown = false, signal = {name="signal-B", type="virtual"}, is_negative = false},
-    ghosts      = {is_shown = false, signal = {name="signal-G", type="virtual"}, is_negative = false},
-    items_on_ground = {is_shown = false, signal = {name="signal-I", type="virtual"}, is_negative = false},
-    trees_and_rocks = {is_shown = false, signal = {name="signal-T", type="virtual"}, is_negative = false},
-    to_be_deconstructed = {is_shown = false, signal = {name="signal-D", type="virtual"}, is_negative = false},
+    uncharted   = {signal = virtual_signal("recursive-blueprints-counter-uncharted")},
+    cliffs      = {signal = virtual_signal("recursive-blueprints-counter-cliffs")},
+    targets     = {signal = virtual_signal("recursive-blueprints-counter-targets")},
+    water       = {signal = virtual_signal("recursive-blueprints-counter-water")},
+    resources   = {signal = virtual_signal("recursive-blueprints-counter-resources")},
+    buildings   = {signal = virtual_signal("recursive-blueprints-counter-buildings")},
+    ghosts      = {signal = virtual_signal("recursive-blueprints-counter-ghosts")},
+    items_on_ground = {signal = virtual_signal("recursive-blueprints-counter-items_on_ground")},
+    trees_and_rocks = {signal = virtual_signal("recursive-blueprints-counter-trees_and_rocks")},
+    to_be_deconstructed = {signal = virtual_signal("recursive-blueprints-counter-to_be_deconstructed")},
   }
 }
 
@@ -115,14 +111,24 @@ function AreaScanner.on_tick_scanner(scanner)
   if previous then
     local current  = scanner.current
     local get_signal = scanner.entity.get_signal
-    for name, param in pairs(scanner.settings.scan_area) do
-      local value = param
-      if type(param) == "table" then value = get_signal(param, circuit_red, circuit_green) end
-      if value ~= previous[name] then
-        previous[name] = value
-        current[name]  = AreaScanner.sanitize_area(name, value)
-        if name == "filter" then AreaScanner.set_filter_mask(scanner.settings, value) end
-        changed = true
+    if not scanner.settings or not scanner.settings.scan_area then
+      for name, param in pairs(AreaScanner.DEFAULT_SCANNER_SETTINGS.scan_area) do
+        local value = get_signal(param, circuit_red, circuit_green)
+        if value ~= previous[name] then
+          previous[name] = value
+          current[name]  = AreaScanner.sanitize_area(name, value)
+          changed = true
+        end
+      end
+    else
+      for name, param in pairs(scanner.settings.scan_area) do
+        local value = param
+        if type(param) == "table" then value = get_signal(param, circuit_red, circuit_green) end
+        if value ~= previous[name] then
+          previous[name] = value
+          current[name]  = AreaScanner.sanitize_area(name, value)
+          changed = true
+        end
       end
     end
   else
@@ -160,19 +166,12 @@ end
 
 function AreaScanner.serialize(entity)
   local scanner = storage.scanners[entity.unit_number]
-  if scanner then
+  if scanner and scanner.settings then
+    if not scanner.settings.scan_area and not scanner.settings.counters then
+      return nil
+    end
     local tags = {}
     tags.settings = util.table.deepcopy(scanner.settings)
-    --Adding old format tags.
-    local scan_area = scanner.settings.scan_area
-    for _, i in pairs({"x", "y", "width", "height"}) do
-      if type(scan_area[i]) == "number" then
-        tags[i] = scan_area[i]
-      else
-        tags[i] = 0
-        tags[i.."_signal"] = {type = scan_area[i].type, name = scan_area[i].name}
-      end
-    end
     return tags
   end
   return nil
@@ -183,9 +182,12 @@ function AreaScanner.deserialize(entity, tags)
   if tags and tags.settings then
     scanner.settings = util.table.deepcopy(tags.settings)
   else
-    scanner.settings = util.table.deepcopy(AreaScanner.DEFAULT_SCANNER_SETTINGS)
+    --scanner.settings = nil
+    --scanner.settings = util.table.deepcopy(AreaScanner.DEFAULT_SCANNER_SETTINGS)
+    --scanner.settings.counters = nil
   end
   if tags and not tags.settings then
+    if not scanner.settings then scanner.settings = {} end
     scanner.settings.scan_area = {
       x = tags.x_signal or tags.x or 0,
       y = tags.y_signal or tags.y or 0,
@@ -193,6 +195,7 @@ function AreaScanner.deserialize(entity, tags)
       height = tags.height_signal or tags.height or 64,
       filter = 966
     }
+    scanner.settings.counters = util.table.deepcopy(OLD_SCANNER_SETTINGS.counters)
   end
   AreaScanner.mark_unknown_signals(scanner.settings)
   AreaScanner.check_input_signals(scanner)
@@ -202,6 +205,10 @@ function AreaScanner.deserialize(entity, tags)
 end
 
 function AreaScanner.check_input_signals(scanner)
+  if not scanner.settings or not scanner.settings.can_area then
+    scanner.network_imput = true
+    return
+  end
   scanner.network_imput = false
   for _, i in pairs(scanner.settings.scan_area) do
     if type(i) == "table" then
@@ -212,15 +219,13 @@ function AreaScanner.check_input_signals(scanner)
 end
 
 function AreaScanner.make_previous(scanner)
-  if not scanner then return end
   AreaScanner.check_input_signals(scanner)
-  local a = scanner.settings.scan_area
+  local a = scanner.settings or AreaScanner.DEFAULT_SCANNER_SETTINGS
+  a = a.scan_area or AreaScanner.DEFAULT_SCANNER_SETTINGS.scan_area
   if not scanner.network_imput then
     --All inputs are constants.
-    local f = AreaScanner.get_filter_mask(scanner.settings) -- the settings are in prioroty for the filter.
-    scanner.previous = {x = a.x, y = a.y, width = a.width, height = a.height, filter = f}
-    scanner.current  = {x = a.x, y = a.y, width = a.width, height = a.height, filter = f}
-    a.filter = f
+    scanner.previous = {x = a.x, y = a.y, width = a.width, height = a.height, filter = a.filter}
+    scanner.current  = {x = a.x, y = a.y, width = a.width, height = a.height, filter = a.filter}
   else
     local entity = scanner.entity
     local previous = {x = 0, y = 0, width = 0, height = 0, filter = 0}
@@ -229,15 +234,7 @@ function AreaScanner.make_previous(scanner)
     for name, param in pairs(a) do
       local value = param
       if type(param) == "table" then value = get_signal(param, circuit_red, circuit_green) end
-      if name == "filter" then
-        if type(param) == "table" then
-          AreaScanner.set_filter_mask(scanner.settings, value)
-        else
-          --ignore constant number for the filter, the settings are in prioroty.
-          value = AreaScanner.get_filter_mask(scanner.settings)
-          a.filter = value
-        end
-      end
+      ---@diagnostic disable-next-line: assign-type-mismatch
       previous[name] = value
       current[name] = AreaScanner.sanitize_area(name, value)
     end
@@ -406,10 +403,12 @@ function AreaScanner.scan_resources(scanner)
   local index = 1
 
   -- Counters
-  local counters = scanner.settings.counters
+  local counters = scanner.settings or AreaScanner.DEFAULT_SCANNER_SETTINGS
+  counters = counters.counters or AreaScanner.DEFAULT_SCANNER_SETTINGS.counters
+  local c_filter = AreaScanner.get_list_from_filter(filter).counters
   for name, counter_setting in pairs(counters) do
     local signal = counter_setting.signal
-    if counter_setting.is_shown and signal then
+    if c_filter[name] and signal then
       local count = scans.counters[name]
       if count and count ~= 0 then
         signal.quality = "normal"
@@ -786,43 +785,36 @@ end
 
 -- Delete signals from uninstalled mods
 function AreaScanner.mark_unknown_signals(scanner_settings)
-  for _, signal in pairs(scanner_settings.scan_area) do
+  if not scanner_settings then return end
+  for _, signal in pairs(scanner_settings.scan_area or {}) do
     if type(signal) == "table" and not GUI_util.get_signal_sprite(signal) then
       signal = {type = "virtual", name = "signal-dot"}
     end
   end
-  for _, signal in pairs(scanner_settings.counters) do
+  for _, signal in pairs(scanner_settings.counters or {}) do
     if not GUI_util.get_signal_sprite(signal.signal) then
       signal.signal = {type = "virtual", name = "signal-dot"}
     end
   end
 end
 
-function AreaScanner.get_filter_mask(settings)
-  local mask = 0
-  local pow = math.pow
-  local v = false
-  for i, filter in pairs(AreaScanner.FILTER_MASK_ORDER) do
-    if filter.group == "filters" then
-      v = settings.filters[filter.name]
-    else
-      v = settings.counters[filter.name].is_shown
-    end
-    if v then mask = mask + pow(2, i-1) end
-  end
-  return mask
-end
-
-function AreaScanner.set_filter_mask(settings, mask)
+function AreaScanner.get_list_from_filter(bitmap)
   local pow = math.pow
   local band = bit32.band
+  local list = {filters={}, counters={}}
   for i, filter in pairs(AreaScanner.FILTER_MASK_ORDER) do
-    if filter.group == "filters" then
-      settings.filters[filter.name] = (band(mask, pow(2, i-1)) ~= 0)
-    else
-      settings.counters[filter.name].is_shown = (band(mask, pow(2, i-1)) ~= 0)
-    end
+    list[filter.group][filter.name] = (band(bitmap, pow(2, i-1)) ~= 0)
   end
+  return list
+end
+
+function AreaScanner.get_filter_from_list(list)
+  local bitmap = 0
+  local pow = math.pow
+  for i, filter in pairs(AreaScanner.FILTER_MASK_ORDER) do
+    if list[filter.group][filter.name] then bitmap = bitmap + pow(2, i-1) end
+  end
+  return bitmap
 end
 
 function AreaScanner.cache_infinite_resources()
@@ -873,5 +865,6 @@ function AreaScanner.get_scan_area(scaner_position, area_settings)
   return area
 end
 
-AreaScanner.toggle_default_settings()
+--AreaScanner.toggle_default_settings()
+AreaScanner.DEFAULT_SCANNER_SETTINGS = NEW_SCANNER_SETTINGS
 return AreaScanner

@@ -168,6 +168,7 @@ end
 function RB_util.clear_constant_combinator(behavior)
   if not behavior or not behavior.valid then return nil end
   if behavior.sections_count > 1 then while(behavior.remove_section(1)) do end end
+  if not behavior.sections or #behavior.sections == 0 then return nil end
   local section = behavior.sections[1]
   if not section.is_manual then return nil end
   section.filters = {}

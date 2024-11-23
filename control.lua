@@ -121,8 +121,8 @@ local function on_setting_changed(event)
     Deployer.toggle_logging()
   elseif event.setting == "recursive-blueprints-deployer-deploy-signal" then
     Deployer.toggle_deploy_signal_setting()
-  elseif event.setting == "recursive-blueprints-old-scaner-default" then
-    AreaScanner.toggle_default_settings()
+  --elseif event.setting == "recursive-blueprints-old-scaner-default" then
+  --  AreaScanner.toggle_default_settings()
   end
 end
 
@@ -166,8 +166,8 @@ local function on_player_setup_blueprint(event)
     local mapping = event.mapping.get()
     for index, entity in pairs(mapping) do
       if entity and entity.name and entity.name == "recursive-blueprints-scanner" then
-        ---@diagnostic disable-next-line: param-type-mismatch
-        bp.set_blueprint_entity_tags(index, AreaScanner.serialize(entity))
+        local tags = AreaScanner.serialize(entity)
+        if tags then bp.set_blueprint_entity_tags(index, tags) end
       end
     end
   end
@@ -300,7 +300,10 @@ script.on_event(defines.events.on_runtime_mod_setting_changed, on_setting_change
 script.on_event(defines.events.on_gui_checked_state_changed, on_gui_checked_state_changed)
 
 -- Ignore ghost build events
-local filter = {{filter = "ghost", invert = true}}
+local filter = {
+  {filter = "name", name = "blueprint-deployer"},
+  {filter = "name", name = "recursive-blueprints-scanner"},
+}
 script.on_event(defines.events.on_built_entity, on_built, filter)
 script.on_event(defines.events.on_entity_cloned, on_built, filter)
 script.on_event(defines.events.on_robot_built_entity, on_built, filter)

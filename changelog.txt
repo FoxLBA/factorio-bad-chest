@@ -1,7 +1,13 @@
 ---------------------------------------------------------------------------------------------------
 Version: 1.4.2
-Date: ????
+Date: 2024-11-23
+  Features:
+    - Added new virtual signals for scanner output (counters).
   Changes:
+    - The new scanner output signals are set by default and can no longer be changed (only return to the default).
+    - The default scanner inputs can no longer be changed.
+    - The default scanner settings are no longer saved in the blueprints.
+    - The "Old default settings for the scanner" option has been removed.
   Locale:
     - Added Chinese (zh-CN) localisation, thanks to plexpt.
 ---------------------------------------------------------------------------------------------------
