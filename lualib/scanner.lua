@@ -391,11 +391,11 @@ function AreaScanner.scan_resources(scanner)
   local result1 = {item = ql(), fluid = ql(), virtual = ql()} -- counters, ore, trees, rocks, fish
   local result2 = {item = ql(), fluid = ql(), virtual = ql()} -- buildings, ghosts, items on ground
   if band(filter, 2) > 0 then count_mineable(prototypes.entity, scans.resources, result1, true) end --show_resources
-  scans.counters.trees_and_rocks = count_mineable(prototypes.entity, scans.environment, result1, (band(filter, 16388) > 0)) --show_environment
-  if band(filter, 8224) > 0 then result2.item = scans.items_on_ground end --show_items_on_ground
-  scans.counters.buildings = count_placeable(prototypes.entity, scans.buildings, result2, (band(filter, 2056) > 0)) --show_buildings
-  scans.counters.ghosts = count_placeable(prototypes.entity, scans.ghosts, result2, (band(filter, 4112) > 0))
-                        + count_placeable(prototypes.tile, scans.ghost_tiles, result2, (band(filter, 4112) > 0)) --show_ghosts
+  scans.counters.trees_and_rocks = count_mineable(prototypes.entity, scans.environment, result1, (band(filter, 4) > 0)) --show_environment
+  if band(filter, 32) > 0 then result2.item = scans.items_on_ground end --show_items_on_ground
+  scans.counters.buildings = count_placeable(prototypes.entity, scans.buildings, result2, (band(filter, 8) > 0)) --show_buildings
+  scans.counters.ghosts = count_placeable(prototypes.entity, scans.ghosts, result2, (band(filter, 16) > 0))
+                        + count_placeable(prototypes.tile, scans.ghost_tiles, result2, (band(filter, 16) > 0)) --show_ghosts
 
   -- Copy resources to combinator output
   local behavior_section = RB_util.clear_constant_combinator(AreaScanner.get_or_create_output_behavior(scanner))
