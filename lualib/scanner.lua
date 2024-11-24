@@ -75,11 +75,11 @@ local circuit_green = defines.wire_connector_id.circuit_green
 
 AreaScanner.FILTER_MASK_ORDER = {
   {group = "filters",  name = "blank"},
-  {group = "filters",  name = "show_resources"},
-  {group = "filters",  name = "show_environment"},
-  {group = "filters",  name = "show_buildings"},
-  {group = "filters",  name = "show_ghosts"},
-  {group = "filters",  name = "show_items_on_ground"},
+  {group = "filters",  name = "resources"},
+  {group = "filters",  name = "trees_and_rocks"},
+  {group = "filters",  name = "buildings"},
+  {group = "filters",  name = "ghosts"},
+  {group = "filters",  name = "items_on_ground"},
   {group = "counters", name = "uncharted"},
   {group = "counters", name = "cliffs"},
   {group = "counters", name = "targets"},
@@ -90,6 +90,7 @@ AreaScanner.FILTER_MASK_ORDER = {
   {group = "counters", name = "items_on_ground"},
   {group = "counters", name = "trees_and_rocks"},
   {group = "counters", name = "to_be_deconstructed"},
+  {group = "filters",  name = "to_be_deconstructed"},
 }
 
 function AreaScanner.on_tick()
@@ -364,6 +365,7 @@ function AreaScanner.scan_resources(scanner)
 
   scans.counters.uncharted = uncharted
   local band = bit32.band
+  local ql = RB_util.get_quality_lists
   if band(filter, 512) > 0 then --water
     local water = 0
     for _, area in pairs(areas)do
@@ -374,7 +376,7 @@ function AreaScanner.scan_resources(scanner)
     scans.counters.water = water
   end
   if band(filter, 4112) > 0 then --ghost_tiles
-    local t = RB_util.get_quality_lists()
+    local t = ql()
     for _, area in pairs(areas)do
       local a = table.deepcopy(area)
       RB_util.area_shrink_1_pixel(a)
@@ -386,8 +388,20 @@ function AreaScanner.scan_resources(scanner)
     end
     scans.ghost_tiles = t
   end
+  if band(filter, 65536) > 0 then --to_be_deconstructed tiles
+    local t = {} -- Tiles do not have quality.
+    for _, area in pairs(areas)do
+      local a = table.deepcopy(area)
+      RB_util.area_shrink_1_pixel(a)
+      for _, entity in pairs(surface.find_tiles_filtered{area = a, force = force, to_be_deconstructed = true}) do
+        local n = entity.name
+        t[n] = (t[n] or 0) + 1
+      end
+    end
+    scans.to_be_deconstructed_tiles = {}
+    scans.to_be_deconstructed_tiles.normal = t
+  end
 
-  local ql = RB_util.get_quality_lists
   local result1 = {item = ql(), fluid = ql(), virtual = ql()} -- counters, ore, trees, rocks, fish
   local result2 = {item = ql(), fluid = ql(), virtual = ql()} -- buildings, ghosts, items on ground
   if band(filter, 2) > 0 then count_mineable(prototypes.entity, scans.resources, result1, true) end --show_resources
@@ -396,6 +410,9 @@ function AreaScanner.scan_resources(scanner)
   scans.counters.buildings = count_placeable(prototypes.entity, scans.buildings, result2, (band(filter, 8) > 0)) --show_buildings
   scans.counters.ghosts = count_placeable(prototypes.entity, scans.ghosts, result2, (band(filter, 16) > 0))
                         + count_placeable(prototypes.tile, scans.ghost_tiles, result2, (band(filter, 16) > 0)) --show_ghosts
+  --to_be_deconstructed_tiles does not require counting because it counts as "deconstructible-tile-proxy" entity.
+  count_placeable(prototypes.entity, scans.to_be_deconstructed, result2, (band(filter, 65536) > 0))
+  count_placeable(prototypes.tile, scans.to_be_deconstructed_tiles, result2, (band(filter, 65536) > 0)) --show to_be_deconstructed
 
   -- Copy resources to combinator output
   local behavior_section = RB_util.clear_constant_combinator(AreaScanner.get_or_create_output_behavior(scanner))
@@ -536,6 +553,7 @@ function AreaScanner.scan_area(surface, areas, scanner_force, filter)
   local buildings = ql()
   local ghosts = ql()
   local items_on_ground = ql()
+  local to_be_deconstructed = ql()
   local counters = {resources = 0, cliffs = 0, items_on_ground = 0, to_be_deconstructed = 0, targets = 0}
 
   if band(filter, 1026) > 0 then -- Ore
@@ -615,7 +633,7 @@ function AreaScanner.scan_area(surface, areas, scanner_force, filter)
     end
   end -- Ghosts
 
-  if band(filter, 32768) > 0 then -- to_be_deconstructed
+  if band(filter, 98304) > 0 then -- to_be_deconstructed
     local blacklist = {}
     local count = 0
     for _, area in pairs(areas) do
@@ -624,6 +642,9 @@ function AreaScanner.scan_area(surface, areas, scanner_force, filter)
         local hash = entity.name .. "_" .. e_pos.x .. "_" .. e_pos.y
         if not blacklist[hash] then
           count = count + 1
+          local n = entity.name
+          local q = entity.quality.name
+          to_be_deconstructed[q][n] = (to_be_deconstructed[q][n] or 0) + 1
           blacklist[hash] = true
         end
       end
@@ -685,7 +706,7 @@ function AreaScanner.scan_area(surface, areas, scanner_force, filter)
     end
   end -- Enemy base
 
-  return {resources = resources, environment = environment, buildings = buildings, ghosts = ghosts, items_on_ground = items_on_ground, counters = counters}
+  return {resources = resources, environment = environment, buildings = buildings, ghosts = ghosts, items_on_ground = items_on_ground, counters = counters, to_be_deconstructed = to_be_deconstructed}
 end
 
 -- Almost a complete copy of "AreaScanner.scan_area()"
@@ -699,6 +720,7 @@ function AreaScanner.scan_area_no_hash(surface, area, scanner_force, filter)
   local buildings = ql()
   local ghosts = ql()
   local items_on_ground = ql()
+  local to_be_deconstructed = ql()
   local counters = {resources = 0, cliffs = 0, items_on_ground = 0, to_be_deconstructed = 0, targets = 0}
 
   if band(filter, 2) > 0 then -- Ore
@@ -741,9 +763,17 @@ function AreaScanner.scan_area_no_hash(surface, area, scanner_force, filter)
     end
   end -- Ghosts
 
-  if band(filter, 32768) > 0 then -- to_be_deconstructed
+  if band(filter, 32768) > 0 then -- to_be_deconstructed count
     counters.to_be_deconstructed = surface.count_entities_filtered{area = area, force = scanner_force, to_be_deconstructed = true}
-  end -- to_be_deconstructed
+  end -- to_be_deconstructed count
+
+  if band(filter, 65536) > 0 then -- to_be_deconstructed entitys
+    for _, entity in pairs(surface.find_entities_filtered{area = area, force = scanner_force, to_be_deconstructed = true}) do
+      local n = entity.name
+      local q = entity.quality.name
+      to_be_deconstructed[q][n] = (to_be_deconstructed[q][n] or 0) + 1
+    end
+  end -- to_be_deconstructed entitys
 
   if band(filter, 8224) > 0 then -- Items on ground
     local count = 0
@@ -767,7 +797,7 @@ function AreaScanner.scan_area_no_hash(surface, area, scanner_force, filter)
     end
   end -- Enemy base
 
-  return {resources = resources, environment = environment, buildings = buildings, ghosts = ghosts, items_on_ground = items_on_ground, counters = counters}
+  return {resources = resources, environment = environment, buildings = buildings, ghosts = ghosts, items_on_ground = items_on_ground, counters = counters, to_be_deconstructed = to_be_deconstructed}
 end
 
 -- Out of bounds check.

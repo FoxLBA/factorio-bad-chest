@@ -1,14 +1,5 @@
 local AreaScannerGUI = {}
 
-AreaScannerGUI.FILTER_NANES = {
-  blank = "blank",
-  show_resources = "resources",
-  show_environment = "trees_and_rocks",
-  show_buildings = "buildings",
-  show_ghosts = "ghosts",
-  show_items_on_ground = "items_on_ground",
-}
-
 -- Build the scanner gui
 function AreaScannerGUI.create_scanner_gui(player, entity)
   local scanner = storage.scanners[entity.unit_number]
@@ -333,7 +324,7 @@ function AreaScannerGUI.create_signal_gui(element)
         filters_flow.add{
           type = "checkbox",
           state = filter_list.filters[name] or false,
-          caption = {"recursive-blueprints.counter-name-"..AreaScannerGUI.FILTER_NANES[name]},
+          caption = {"recursive-blueprints.counter-name-"..name},
           tooltip = tooltip,
           tags = {
             ["recursive-blueprints-filter-checkbox-field"] = name,
