@@ -123,20 +123,111 @@ function RB_util.area_normalize(a)
   return a
 end
 
-function RB_util.cache_rocks_names()
-  local rocks={}
+local function find_stack_in_entity(entity, item_name)
+  local e_type = entity.type
+  if e_type == "container" or e_type == "logistic-container" then
+    local inventory = entity.get_inventory(defines.inventory.chest)
+    for i = 1, #inventory do
+      if inventory[i].valid_for_read and inventory[i].name == item_name then
+        return inventory[i]
+      end
+    end
+  elseif e_type == "inserter" then
+    local behavior = entity.get_control_behavior()
+    e_held_stack = entity.held_stack
+    if behavior
+    and behavior.circuit_read_hand_contents
+    and e_held_stack.valid_for_read
+    and e_held_stack.name == item_name then
+      return e_held_stack
+    end
+  end
+end
+
+-- Create a unique key for a circuit connector
+local function con_hash(connector)
+  return connector.owner.unit_number .. "-" .. connector.wire_connector_id
+end
+
+---Breadth-first search for an item in the circuit network.
+---If there are multiple items, returns the closest one (least wire hops).
+---@param entity LuaEntity The entity that the search starts with.
+---@param item_name string The name of the item.
+---@param red boolean Search in the red network?
+---@param green boolean Search in the green network?
+---@return LuaItemStack | nil
+function RB_util.find_stack_in_network(entity, item_name, red, green)
+  local present = {}
+  if red then
+    local c = entity.get_wire_connector(defines.wire_connector_id.circuit_red, false)
+    present[con_hash(c)] = c
+  end
+  if green then
+    local c = entity.get_wire_connector(defines.wire_connector_id.circuit_green, false)
+    present[con_hash(c)] = c
+  end
+  local past = {}
+  local future = {}
+  while next(present) do
+    for key, current_con in pairs(present) do
+      -- Search connecting wires
+      if current_con and current_con.real_connections then
+        for _, w_con in pairs(current_con.real_connections) do
+          local distant_con = w_con.target
+          if distant_con.valid and distant_con.owner and distant_con.owner.valid then
+            local hash = con_hash(distant_con)
+            if not past[hash] and not present[hash] and not future[hash] then
+              -- Search inside the entity
+              local stack = find_stack_in_entity(distant_con.owner, item_name)
+              if stack then return stack end
+              -- Add wier connector to future searches
+              future[hash] = distant_con
+            end
+          end
+        end
+      end
+      past[key] = true
+    end
+    present = future
+    future = {}
+  end
+  return nil
+end
+
+function RB_util.is_BP(s)
+  return s and s.valid_for_read and (s.is_blueprint or s.is_blueprint_book or s.is_upgrade_item or s.is_deconstruction_item)
+end
+
+
+-- Collect all modded blueprint signals in one table
+local function cache_blueprint_signals()
+  local blueprint_signals = {}
+  local filter ={
+    {filter = "type", type="blueprint"},
+    {filter = "type", type="blueprint-book"},
+    {filter = "type", type="upgrade-item"},
+    {filter = "type", type="deconstruction-item"}
+  }
+  for _, item in pairs(prototypes.get_item_filtered(filter)) do
+    table.insert(blueprint_signals, {name=item.name, type="item"})
+  end
+  storage.blueprint_signals = blueprint_signals
+end
+
+local function cache_rocks_names()
+  --local rocks={}
   local rocks2={}
   for name, e_prototype in pairs(prototypes.entity) do
     if e_prototype.count_as_rock_for_filtered_deconstruction  then
-      rocks[name] = true
+      --rocks[name] = true
       table.insert(rocks2, name)
     end
   end
-  storage.rocks_names = rocks
+  --storage.rocks_names = rocks
   storage.rocks_names2 = rocks2
 end
 
-function RB_util.cache_quality_names()
+local function cache_quality_names()
   local quality_names={}
   local quality_levels={}
   for name, q in pairs(prototypes.quality) do
@@ -145,6 +236,21 @@ function RB_util.cache_quality_names()
   end
   storage.quality_names = quality_names
   storage.quality_levels = quality_levels
+end
+
+local function create_common_bp_plans()
+  if not storage.plans then
+    storage.plans = {game.create_inventory(1), game.create_inventory(1)}
+    storage.plans[1][1].set_stack("deconstruction-planner")
+    storage.plans[2][1].set_stack("upgrade-planner")
+  end
+end
+
+function RB_util.cache_in_storage()
+  cache_blueprint_signals() --storage.blueprint_signals
+  cache_rocks_names() --storage.rocks_names, storage.rocks_names2
+  cache_quality_names() --storage.quality_names, storage.quality_levels
+  create_common_bp_plans() --storage.plans
 end
 
 function RB_util.get_quality_lists()
@@ -162,12 +268,13 @@ function RB_util.get_elem_from_signal(signal)
   return {type=signal.type, name=signal.name}
 end
 
----Delete all signals in constant combinator end return LuaLogisticSection if pissible.
+---Delete all signals in constant combinator end return LuaLogisticSection if possible.
 ---@param behavior LuaControlBehavior|LuaConstantCombinatorControlBehavior|nil
 ---@return LuaLogisticSection|nil
 function RB_util.clear_constant_combinator(behavior)
   if not behavior or not behavior.valid then return nil end
   if behavior.sections_count > 1 then while(behavior.remove_section(1)) do end end
+  if behavior.sections_count == 0 then behavior.add_section() end
   if not behavior.sections or #behavior.sections == 0 then return nil end
   local section = behavior.sections[1]
   if not section.is_manual then return nil end

@@ -1,15 +1,14 @@
 require "util"
 Deployer = require "lualib.deployer"
+Deployer2 = require "lualib.deployer2"
 RB_util = require "lualib.rb-util"
 GUI_util = require "lualib.gui-util"
 AreaScannerGUI = require "lualib.scanner-gui"
 AreaScanner = require "lualib.scanner"
 
 local function init_caches()
-  RB_util.cache_rocks_names()
-  RB_util.cache_quality_names()
+  RB_util.cache_in_storage()
   GUI_util.cache_signals()
-  Deployer.cache_blueprint_signals()
   AreaScanner.cache_infinite_resources()
   -- Check deleted signals in the default scanner settings.
   AreaScanner.mark_unknown_signals(AreaScanner.DEFAULT_SCANNER_SETTINGS)
@@ -20,7 +19,10 @@ local function dolly_moved_entity(event)
   local scanner = storage.scanners[entity.unit_number]
   if scanner and scanner.output_entity and scanner.output_entity.valid then
     scanner.output_entity.teleport(entity.position)
+    return
   end
+  local deployer2 = storage.deployers2[entity.unit_number]
+  if deployer2 then deployer2:dolly_moved() end
 end
 
 local function register_events()
@@ -31,6 +33,7 @@ end
 
 local function on_init()
   storage.deployers = {}
+  storage.deployers2 = {}
   storage.scanners = {}
   storage.blueprints = {}
   init_caches()
@@ -39,6 +42,7 @@ end
 
 local function on_mods_changed(event)
   init_caches()
+  if not storage.deployers2 then storage.deployers2 = {} end
 
   --Migrate deployers and scanners to new mod name
   if (event and event.mod_changes) and
@@ -119,6 +123,7 @@ local function on_setting_changed(event)
     end
   elseif event.setting == "recursive-blueprints-logging" then
     Deployer.toggle_logging()
+    Deployer2.toggle_logging()
   elseif event.setting == "recursive-blueprints-deployer-deploy-signal" then
     Deployer.toggle_deploy_signal_setting()
   --elseif event.setting == "recursive-blueprints-old-scaner-default" then
@@ -129,6 +134,7 @@ end
 local function on_tick()
   Deployer.on_tick()
   AreaScanner.on_tick()
+  Deployer2.on_tick()
 end
 
 local function on_built(event)
@@ -137,6 +143,8 @@ local function on_built(event)
 
   if entity.name == "blueprint-deployer" then
     Deployer.on_built(entity)
+  elseif entity.name == "blueprint-deployer2" then
+    Deployer2.on_built(entity)
   elseif entity.name == "recursive-blueprints-scanner" then
     AreaScanner.on_built(entity, event)
   end
@@ -145,8 +153,10 @@ end
 local function on_object_destroyed(event)
   if not event.useful_id then return end
   if event.type ~= defines.target_type.entity then return end
-  AreaScanner.on_destroyed(event.useful_id)
-  Deployer.on_destroyed(event.useful_id)
+  local id = event.useful_id
+  AreaScanner.on_destroyed(id)
+  Deployer.on_destroyed(id)
+  Deployer2.on_destroy(id)
 end
 
 local function on_player_setup_blueprint(event)
@@ -302,6 +312,7 @@ script.on_event(defines.events.on_gui_checked_state_changed, on_gui_checked_stat
 -- Ignore ghost build events
 local filter = {
   {filter = "name", name = "blueprint-deployer"},
+  {filter = "name", name = "blueprint-deployer2"},
   {filter = "name", name = "recursive-blueprints-scanner"},
 }
 script.on_event(defines.events.on_built_entity, on_built, filter)

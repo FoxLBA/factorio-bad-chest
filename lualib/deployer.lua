@@ -425,7 +425,7 @@ function Deployer.copy_blueprint(deployer)
     local g = deployer.get_signal(signal, circuit_green) >= 1
     if r or g then
       -- Signal exists, now we have to search for the blueprint
-      local stack = Deployer.find_stack_in_network(deployer, signal.name, r, g)
+      local stack = RB_util.find_stack_in_network(deployer, signal.name, r, g)
       if stack then
         inventory[1].set_stack(stack)
         Deployer.deployer_logging("copy_book", deployer, stack)
@@ -433,97 +433,6 @@ function Deployer.copy_blueprint(deployer)
       end
     end
   end
-end
-
--- Create a unique key for a circuit connector
-local function con_hash(connector)
-  return connector.owner.unit_number .. "-" .. connector.wire_connector_id
-end
-
--- Breadth-first search for an item in the circuit network
--- If there are multiple items, returns the closest one (least wire hops)
-function Deployer.find_stack_in_network(deployer, item_name, red, green)
-  local present = {}
-  if red then
-    local c = deployer.get_wire_connector(circuit_red)
-    present[con_hash(c)] = c
-  end
-  if green then
-    local c = deployer.get_wire_connector(circuit_green)
-    present[con_hash(c)] = c
-  end
-  local past = {}
-  local future = {}
-  while next(present) do
-    for key, current_con in pairs(present) do
-      -- Search connecting wires
-      if current_con and current_con.real_connections then
-        for _, w_con in pairs(current_con.real_connections) do
-          local distant_con = w_con.target
-          if distant_con.valid and distant_con.owner and distant_con.owner.valid then
-            local hash = con_hash(distant_con)
-            if not past[hash] and not present[hash] and not future[hash] then
-              -- Search inside the entity
-              local stack = Deployer.find_stack_in_container(distant_con.owner, item_name)
-              if stack then return stack end
-              -- Add wier connector to future searches
-              future[hash] = distant_con
-            end
-          end
-        end
-      end
-      past[key] = true
-    end
-    present = future
-    future = {}
-  end
-end
-
-function Deployer.find_stack_in_container(entity, item_name)
-  local e_type = entity.type
-  if e_type == "container" or e_type == "logistic-container" then
-    local inventory = entity.get_inventory(defines.inventory.chest)
-    for i = 1, #inventory do
-      if inventory[i].valid_for_read and inventory[i].name == item_name then
-        return inventory[i]
-      end
-    end
-  elseif e_type == "inserter" then
-    local behavior = entity.get_control_behavior()
-    e_held_stack = entity.held_stack
-    if behavior
-    and behavior.circuit_read_hand_contents
-    and e_held_stack.valid_for_read
-    and e_held_stack.name == item_name then
-      return e_held_stack
-    end
-  end
-end
-
-function Deployer.get_nested_blueprint(bp)
-  if not bp then return end
-  if not bp.valid_for_read then return end
-  while bp.is_blueprint_book do
-    if not bp.active_index then return end
-    bp = bp.get_inventory(defines.inventory.item_main)[bp.active_index]
-    if not bp.valid_for_read then return end
-  end
-  return bp
-end
-
--- Collect all modded blueprint signals in one table
-function Deployer.cache_blueprint_signals()
-  local blueprint_signals = {}
-  local filter ={
-    {filter = "type", type="blueprint"},
-    {filter = "type", type="blueprint-book"},
-    {filter = "type", type="upgrade-item"},
-    {filter = "type", type="deconstruction-item"}
-  }
-  for _, item in pairs(prototypes.get_item_filtered(filter)) do
-    table.insert(blueprint_signals, {name=item.name, type="item"})
-  end
-  storage.blueprint_signals = blueprint_signals
 end
 
 local LOGGING_SIGNAL = {name="signal-L", type="virtual"}

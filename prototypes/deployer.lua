@@ -54,3 +54,7 @@ data:extend{
     },
   },
 }
+
+local deployer2 = table.deepcopy(deployer)
+deployer2.name = "blueprint-deployer2"
+data:extend{deployer2}
