@@ -180,7 +180,7 @@ function Deployer.signal_filtred_deconstruction(deployer, deconstruct, whitelist
     if signal.count > 0 then
       local s_name = signal.signal.name
       if signal.signal.type == "item" then
-        local i_prototype = game.item_prototypes[s_name]
+        local i_prototype = prototypes.item[s_name]
         if i_prototype.place_result then
           table.insert(list, i_prototype.place_result.name)
           if i_prototype.curved_rail then

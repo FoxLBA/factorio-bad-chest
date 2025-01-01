@@ -1,4 +1,10 @@
 ---------------------------------------------------------------------------------------------------
+Version: 1.4.4
+Date: ????
+  Bugfixes:
+    - Fixed deployer siglal filtred deconstruction.
+    - Fixed minimap scale in scanner GUI (It was affected by GUI scale setting).
+---------------------------------------------------------------------------------------------------
 Version: 1.4.3
 Date: 2024-11-24
   Features:
