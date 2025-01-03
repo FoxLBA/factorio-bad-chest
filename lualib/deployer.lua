@@ -360,36 +360,16 @@ end
 
 function Deployer.get_area(deployer)
   local get_signal = deployer.get_signal
-  local X = get_signal(X_SIGNAL, circuit_red, circuit_green)
-  local Y = get_signal(Y_SIGNAL, circuit_red, circuit_green)
-  local W = get_signal(WIDTH_SIGNAL, circuit_red, circuit_green)
-  local H = get_signal(HEIGHT_SIGNAL, circuit_red, circuit_green)
-
-  if W < 1 then W = 1 end
-  if H < 1 then H = 1 end
-
-  if settings.global["recursive-blueprints-area"].value == "corner" then
-    -- Convert from top left corner to center
-    X = X + math.floor((W - 1) / 2)
-    Y = Y + math.floor((H - 1) / 2)
-  end
-
-  -- Align to grid
-  if W % 2 == 0 then X = X + 0.5 end
-  if H % 2 == 0 then Y = Y + 0.5 end
-
-  -- Subtract 1 pixel from the edges to avoid tile overlap
-  -- 2 / 256 = 0.0078125
-  W = W - 0.0078125
-  H = H - 0.0078125
-
   local position = deployer.position
-  local area = {
-    {position.x + X - W/2, position.y + Y - H/2},
-    {position.x + X + W/2, position.y + Y + H/2}
-  }
-  RB_util.area_check_limits(area)
-  return area
+  local area = RB_util.area_get_from_offsets(
+    get_signal(X_SIGNAL, circuit_red, circuit_green) + position.x - 0.5,
+    get_signal(Y_SIGNAL, circuit_red, circuit_green) + position.y - 0.5,
+    get_signal(WIDTH_SIGNAL, circuit_red, circuit_green),
+    get_signal(HEIGHT_SIGNAL, circuit_red, circuit_green)
+  )
+  if area[1][1] == area[2][1] then area[2][1] = area[2][1] + 1 end
+  if area[1][2] == area[2][2] then area[2][2] = area[2][2] + 1 end
+  return RB_util.area_shrink_1_pixel(area)
 end
 
 function Deployer.get_area_signals(deployer)

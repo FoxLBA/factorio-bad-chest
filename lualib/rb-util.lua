@@ -123,6 +123,27 @@ function RB_util.area_normalize(a)
   return a
 end
 
+function RB_util.area_get_from_offsets(x, y, w, h)
+  local area
+  if settings.global["recursive-blueprints-area"].value == "corner" then
+    area = {
+      {x, y},
+      {x + w, y + h}
+    }
+  else
+    -- Align to grid
+    if w % 2 ~= 0 then x = x + 0.5 end
+    if h % 2 ~= 0 then y = y + 0.5 end
+    area = {
+      {x - w/2, y - h/2},
+      {x + w/2, y + h/2}
+    }
+  end
+  RB_util.area_normalize(area)
+  RB_util.area_check_limits(area)
+  return area
+end
+
 local function find_stack_in_entity(entity, item_name)
   local e_type = entity.type
   if e_type == "container" or e_type == "logistic-container" then

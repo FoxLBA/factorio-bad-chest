@@ -383,36 +383,16 @@ function BAD_Chest:get_target_position()
 end
 
 function BAD_Chest:get_area()
-  local X = self:get_signal(AREA_SIGNALS.x)
-  local Y = self:get_signal(AREA_SIGNALS.y)
-  local W = self:get_signal(AREA_SIGNALS.w)
-  local H = self:get_signal(AREA_SIGNALS.h)
-
-  if W < 1 then W = 1 end
-  if H < 1 then H = 1 end
-
-  if settings.global["recursive-blueprints-area"].value == "corner" then
-    -- Convert from top left corner to center
-    X = X + math.floor((W - 1) / 2)
-    Y = Y + math.floor((H - 1) / 2)
-  end
-
-  -- Align to grid
-  if W % 2 == 0 then X = X + 0.5 end
-  if H % 2 == 0 then Y = Y + 0.5 end
-
-  -- Subtract 1 pixel from the edges to avoid tile overlap
-  -- 2 / 256 = 0.0078125
-  W = W - 0.0078125
-  H = H - 0.0078125
-
   local position = self.entity.position
-  local area = {
-    {position.x + X - W/2, position.y + Y - H/2},
-    {position.x + X + W/2, position.y + Y + H/2}
-  }
-  RB_util.area_check_limits(area)
-  return area
+  local area = RB_util.area_get_from_offsets(
+    self:get_signal(AREA_SIGNALS.x) + position.x - 0.5,
+    self:get_signal(AREA_SIGNALS.y) + position.y - 0.5,
+    self:get_signal(AREA_SIGNALS.w),
+    self:get_signal(AREA_SIGNALS.h)
+  )
+  if area[1][1] == area[2][1] then area[2][1] = area[2][1] + 1 end
+  if area[1][2] == area[2][2] then area[2][2] = area[2][2] + 1 end
+  return RB_util.area_shrink_1_pixel(area)
 end
 
 function BAD_Chest:reset_IO()

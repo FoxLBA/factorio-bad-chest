@@ -804,7 +804,7 @@ end
 -- Limit width/height to 999 for better performance.
 function AreaScanner.sanitize_area(key, value)
   if key == "width" or key == "height" then
-    if value < 0 then value = 0 end
+    if value < -999 then value = -999 end
     if value > 999 then value = 999 end
   elseif key ~= "filter" then
     if value > 8388600 then value = 8388600 end
@@ -871,28 +871,12 @@ end
 ---@param area_settings table
 ---@return BoundingBox
 function AreaScanner.get_scan_area(scaner_position, area_settings)
-  local x = area_settings.x
-  local y = area_settings.y
-  local w = area_settings.width
-  local h = area_settings.height
-  local area
-  if settings.global["recursive-blueprints-area"].value == "corner" then
-    area = {
-      {scaner_position.x + x, scaner_position.y + y},
-      {scaner_position.x + x + w, scaner_position.y + y + h}
-    }
-  else
-    -- Align to grid
-    if w % 2 ~= 0 then x = x + 0.5 end
-    if h % 2 ~= 0 then y = y + 0.5 end
-    area = {
-      {scaner_position.x + x - w/2, scaner_position.y + y - h/2},
-      {scaner_position.x + x + w/2, scaner_position.y + y + h/2}
-    }
-  end
-  RB_util.area_normalize(area)
-  RB_util.area_check_limits(area)
-  return area
+  return RB_util.area_get_from_offsets(
+      scaner_position.x + area_settings.x,
+      scaner_position.y + area_settings.y,
+      area_settings.width,
+      area_settings.height
+    )
 end
 
 --AreaScanner.toggle_default_settings()
