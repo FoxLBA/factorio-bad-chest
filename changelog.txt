@@ -1,9 +1,13 @@
 ---------------------------------------------------------------------------------------------------
 Version: 1.4.4
 Date: ????
+  Major Features:
+    - Added tips and tricks pages.
   Bugfixes:
     - Fixed deployer siglal filtred deconstruction.
     - Fixed minimap scale in scanner GUI (It was affected by GUI scale setting).
+  Locale:
+    - Added Russian (ru) localisation.
 ---------------------------------------------------------------------------------------------------
 Version: 1.4.3
 Date: 2024-11-24

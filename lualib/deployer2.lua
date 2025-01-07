@@ -1,6 +1,6 @@
 local C_COMB_SECTIONS_WRITE_LIMIT = 20
 -- Command signals
-local COM_SIGNAL = {name="recursive-blueprints-deployer-command", type="virtual"}
+local COM_SIGNAL = {name="rbp-command", type="virtual"}
 local AREA_SIGNALS = {
   x = {name="signal-X", type="virtual"},
   y = {name="signal-Y", type="virtual"},
@@ -8,15 +8,15 @@ local AREA_SIGNALS = {
   h = {name="signal-H", type="virtual"},
 }
 local FLAG_SIGNALS = {
-  rotate =     {name="recursive-blueprints-deployer-rotate-bp",     type="virtual"},
-  superforce = {name="recursive-blueprints-deployer-superforce",    type="virtual"},
-  cancel =     {name="recursive-blueprints-deployer-cancel",        type="virtual"},
-  invert =     {name="recursive-blueprints-deployer-invert-filter", type="virtual"},
-  enviroment = {name="recursive-blueprints-deployer-enviroment",    type="virtual"},
-  quality =    {name="recursive-blueprints-deployer-quality",       type="virtual"},
+  rotate =     {name="rbp-rotate-bp",     type="virtual"},
+  superforce = {name="rbp-superforce",    type="virtual"},
+  cancel =     {name="rbp-cancel",        type="virtual"},
+  invert =     {name="rbp-invert-filter", type="virtual"},
+  enviroment = {name="rbp-enviroment",    type="virtual"},
+  quality =    {name="rbp-quality",       type="virtual"},
 }
 local BOOK_SIGNALS = {}
-for i = 1, 6 do table.insert(BOOK_SIGNALS, {name="recursive-blueprints-book-layer"..i, type="virtual"}) end
+for i = 1, 6 do table.insert(BOOK_SIGNALS, {name="rbp-book-layer"..i, type="virtual"}) end
 
 ---@class BAD_Chest
 ---@field entity LuaEntity
@@ -319,10 +319,12 @@ function BAD_Chest:write_to_c_comb(c_comb)
   if not self:separete_comm_inputs() then return end
   local section_i = self:get_signal(FLAG_SIGNALS.enviroment)
   if section_i > C_COMB_SECTIONS_WRITE_LIMIT then return end
+  local is_exact_section = true
   local behavior = c_comb.get_control_behavior() ---@type LuaConstantCombinatorControlBehavior
   if section_i < 1 then
     RB_util.clear_constant_combinator(behavior)
     section_i = 1
+    is_exact_section = false
   end
   if behavior.sections_count < section_i then
     for _ = behavior.sections_count, section_i do behavior.add_section() end
@@ -335,6 +337,7 @@ function BAD_Chest:write_to_c_comb(c_comb)
     table.insert(filter, signal.signal)
   end
   section.filters = filter
+  section.active = (not is_exact_section) or (self:get_signal(FLAG_SIGNALS.invert) < 1)
 end
 
 function BAD_Chest:get_signal(signal)
@@ -357,9 +360,9 @@ function BAD_Chest:separete_comm_inputs()
         self.input_main = defines.wire_connector_id.circuit_green
         self.input_alt  = defines.wire_connector_id.circuit_red
       end
-      return true
+    else
+      return false
     end
-    return false
   end
   return true
 end

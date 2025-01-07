@@ -30,7 +30,7 @@ for i = 1, 6 do
     rbp_signals,
     {
       type = "virtual-signal",
-      name = "recursive-blueprints-book-layer"..i,
+      name = "rbp-book-layer"..i,
       icon = "__rec-blue-plus__/graphics/signals/book_layer_"..i..".png",
       subgroup = "recursive-blueprints-signals",
       order = "b-"..i,
@@ -43,7 +43,7 @@ for i, name in pairs(deployer) do
     rbp_signals,
     {
       type = "virtual-signal",
-      name = "recursive-blueprints-deployer-"..name,
+      name = "rbp-"..name,
       icon = "__rec-blue-plus__/graphics/signals/deployer_"..name..".png",
       subgroup = "recursive-blueprints-signals",
       order = "c-"..i,

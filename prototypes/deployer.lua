@@ -57,4 +57,5 @@ data:extend{
 
 local deployer2 = table.deepcopy(deployer)
 deployer2.name = "blueprint-deployer2"
+deployer2.localised_description = {"", "recursive-blueprints.wip-note", "\n", "item-description.blueprint-deployer2"}
 data:extend{deployer2}

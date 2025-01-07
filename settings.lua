@@ -20,12 +20,4 @@ data:extend{
     default_value = "zero",
     allowed_values = {"construction_robot", "zero", "both"}
   },
-  --[[
-  {
-    type = "bool-setting",
-    name = "recursive-blueprints-old-scaner-default",
-    setting_type = "runtime-global",
-    default_value = false
-  }
-  ]]
 }
