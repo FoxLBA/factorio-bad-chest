@@ -25,6 +25,10 @@ deployer.picture.layers = {
   -- Shadow
   table.deepcopy(data.raw["container"]["iron-chest"].picture.layers[2])
 }
+local deployer2 = table.deepcopy(deployer)
+deployer2.name = "blueprint-deployer2"
+deployer2.minable.result = "blueprint-deployer2"
+deployer2.localised_description = {"", {"recursive-blueprints.wip-note"}, "\n", {"item-description.blueprint-deployer2"}}
 
 local item_sounds = require("__base__.prototypes.item_sounds")
 data:extend{
@@ -53,9 +57,29 @@ data:extend{
       {type="item", name="advanced-circuit", amount=1},
     },
   },
+  deployer2,
+  {
+    type = "item",
+    name = "blueprint-deployer2",
+    icon = "__rec-blue-plus__/graphics/blueprint-deployer-icon.png",
+    icon_size = 64,
+    inventory_move_sound = item_sounds.metal_chest_inventory_move,
+    pick_sound = item_sounds.metal_chest_inventory_pickup,
+    drop_sound = item_sounds.metal_chest_inventory_move,
+    subgroup = "logistic-network",
+    order = "c[signal]-b[blueprint-deployer2]",
+    place_result = "blueprint-deployer2",
+    stack_size = 50,
+  },
+  {
+    type = "recipe",
+    name = "blueprint-deployer2",
+    results = {{type="item", name="blueprint-deployer2", amount=1}},
+    enabled = false,
+    ingredients = {
+      {type="item", name="steel-chest", amount=1},
+      {type="item", name="electronic-circuit", amount=3},
+      {type="item", name="advanced-circuit", amount=1},
+    },
+  },
 }
-
-local deployer2 = table.deepcopy(deployer)
-deployer2.name = "blueprint-deployer2"
-deployer2.localised_description = {"", "recursive-blueprints.wip-note", "\n", "item-description.blueprint-deployer2"}
-data:extend{deployer2}

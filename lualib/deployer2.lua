@@ -17,6 +17,10 @@ local FLAG_SIGNALS = {
 }
 local BOOK_SIGNALS = {}
 for i = 1, 6 do table.insert(BOOK_SIGNALS, {name="rbp-book-layer"..i, type="virtual"}) end
+local OUTPUT_VALID_NAMES = {
+  output_alt = true,
+  output_compensate = true,
+}
 
 ---@class BAD_Chest
 ---@field entity LuaEntity
@@ -24,7 +28,8 @@ for i = 1, 6 do table.insert(BOOK_SIGNALS, {name="rbp-book-layer"..i, type="virt
 ---@field is_input_combined boolean
 ---@field input_main defines.wire_connector_id
 ---@field input_alt defines.wire_connector_id
----@field output_entity nil|LuaEntity
+---@field output_alt nil|LuaEntity
+---@field output_compensate nil|LuaEntity
 local BAD_Chest = {}
 BAD_Chest.__index = BAD_Chest
 
@@ -101,12 +106,13 @@ function BAD_Chest:tick()
       local c_comb = self:find_c_comb()
       if not c_comb then return end
       local behavior = c_comb.get_control_behavior() ---@cast behavior LuaConstantCombinatorControlBehavior
+      if not behavior and not behavior.valid then return end
       if     com == 30 then -- Read signals from c_comb
-        self:read_from_c_comb(c_comb)
+        self:read_from_c_comb(behavior)
       elseif com == 31 then -- Write signals to c_comb
-        self:write_to_c_comb(c_comb)
+        self:write_to_c_comb(behavior)
       elseif com == 32 then -- On/Off remote c_comb
-        behavior.enabled = self:get_signal(FLAG_SIGNALS.invert) > 0
+        behavior.enabled = self:get_signal(FLAG_SIGNALS.invert) < 1
       elseif com == 33 then -- Clear remote c_comb
         RB_util.clear_constant_combinator(behavior)
       end
@@ -298,16 +304,30 @@ end
 
 function BAD_Chest:read_from_c_comb(c_comb)
   if not self:separete_comm_inputs() then return end
-  local out_e = self:output_get_or_create_entity()
+  local out_e = self:output_get_or_create_entity("output_alt")
   if not out_e then return end
   local section_i = self:get_signal(FLAG_SIGNALS.enviroment)
   if section_i < 1 then
-    out_e.copy_settings(c_comb)
+    local out_b = out_e.get_control_behavior() ---@cast out_b LuaConstantCombinatorControlBehavior
+    RB_util.clear_constant_combinator(out_b)
+    if not out_b or not out_b.valid then return end
+    out_b.remove_section(1)
+    for _, section in pairs(c_comb.sections) do
+      if section.active then
+        if section.group == "" then
+          local s = out_b.add_section()
+          s.filters = section.filters
+          s.multiplier = section.multiplier
+          s.active = true
+        else
+          out_b.add_section(section.group)
+        end
+      end
+    end
   else
-    local distant_behavior = c_comb.get_control_behavior() ---@type LuaConstantCombinatorControlBehavior
     local s = RB_util.clear_constant_combinator(out_e.get_control_behavior())
-    if distant_behavior.sections_count < section_i then return end
-    local distant_s = distant_behavior.sections[section_i]
+    if c_comb.sections_count < section_i then return end
+    local distant_s = c_comb.sections[section_i]
     if not distant_s.active and (self:get_signal(FLAG_SIGNALS.superforce) < 1) then return end
     s.filters  = distant_s.filters
     s.multiplier  = distant_s.multiplier
@@ -315,12 +335,11 @@ function BAD_Chest:read_from_c_comb(c_comb)
   end
 end
 
-function BAD_Chest:write_to_c_comb(c_comb)
+function BAD_Chest:write_to_c_comb(behavior)
   if not self:separete_comm_inputs() then return end
   local section_i = self:get_signal(FLAG_SIGNALS.enviroment)
   if section_i > C_COMB_SECTIONS_WRITE_LIMIT then return end
   local is_exact_section = true
-  local behavior = c_comb.get_control_behavior() ---@type LuaConstantCombinatorControlBehavior
   if section_i < 1 then
     RB_util.clear_constant_combinator(behavior)
     section_i = 1
@@ -334,7 +353,8 @@ function BAD_Chest:write_to_c_comb(c_comb)
   local filter = {}
   ---@diagnostic disable-next-line: param-type-mismatch
   for _, signal in pairs(self.entity.get_signals(self.input_alt)) do
-    table.insert(filter, signal.signal)
+    local s = signal.signal
+    table.insert(filter, {value={type=s.type, name=s.name, quality=s.quality or "normal", comparator="="}, min=signal.count})
   end
   section.filters = filter
   section.active = (not is_exact_section) or (self:get_signal(FLAG_SIGNALS.invert) < 1)
@@ -348,20 +368,33 @@ function BAD_Chest:get_signal(signal)
 end
 
 function BAD_Chest:separete_comm_inputs()
+  local main_e = self.entity
   if self.is_input_combined then
-    local r = self.entity.get_signal(COM_SIGNAL, defines.wire_connector_id.circuit_red)
-    local g = self.entity.get_signal(COM_SIGNAL, defines.wire_connector_id.circuit_green)
+    local wr, wg = defines.wire_connector_id.circuit_red, defines.wire_connector_id.circuit_green
+    local r = main_e.get_signal(COM_SIGNAL, wr)
+    local g = main_e.get_signal(COM_SIGNAL, wg)
     if (r==0 or g==0) then
       self.is_input_combined = false
       if g==0 then
-        self.input_main = defines.wire_connector_id.circuit_red
-        self.input_alt  = defines.wire_connector_id.circuit_green
+        self.input_main = wr
+        self.input_alt  = wg
       else
-        self.input_main = defines.wire_connector_id.circuit_green
-        self.input_alt  = defines.wire_connector_id.circuit_red
+        self.input_main = wg
+        self.input_alt  = wr
       end
     else
       return false
+    end
+  end
+  --Read inventory and emit negative signal to compensate it in alt output wire.
+  local c = self:output_get_or_create_entity("output_compensate")
+  if c and c.valid then
+    local section = RB_util.clear_constant_combinator(c.get_control_behavior())
+    local inv = main_e.get_inventory(defines.inventory.chest)
+    if inv and inv.valid and (not inv.is_empty()) and section and section.valid then
+      local con = inv.get_contents()[1]
+      ---@diagnostic disable-next-line: missing-fields
+      section.set_slot(1, {value={name=con.name, quality=con.quality, comparator="="}, min=(-con.count)})
     end
   end
   return true
@@ -400,23 +433,29 @@ end
 
 function BAD_Chest:reset_IO()
   self.is_input_combined = true
-  local e = self.output_entity
-  if e and e.valid then
-    e.destroy()
-    self.output_entity = nil
+  for name, _ in pairs(OUTPUT_VALID_NAMES) do
+    local e = self[name]
+    if e and e.valid then
+      e.destroy()
+      self[name] = nil
+    end
   end
 end
 
 function BAD_Chest:output_clear()
-  local e = self.output_entity
+  if not self:separete_comm_inputs() then return end
+  local e = self.output_alt
   if e and e.valid then
     RB_util.clear_constant_combinator(e.get_control_behavior())
   end
 end
 
-function BAD_Chest:output_get_or_create_entity()
+---@param name string
+---@return LuaEntity|nil
+function BAD_Chest:output_get_or_create_entity(name)
+  if not OUTPUT_VALID_NAMES[name] then return end
   local main_e = self.entity
-  local b = self.output_entity
+  local b = self[name]
   if not b or not b.valid then
     b = main_e.surface.create_entity{
       name = "recursive-blueprints-hidden-io",
@@ -425,7 +464,7 @@ function BAD_Chest:output_get_or_create_entity()
       create_build_effect_smoke = false,
     }
     if not b then return end
-    self.output_entity = b
+    self[name] = b
     local def = self.input_alt
     local hidden_con = b.get_wire_connector(def, true)
     hidden_con.connect_to(main_e.get_wire_connector(def, true))
@@ -455,8 +494,10 @@ function BAD_Chest:pick_from_book(bp)
 end
 
 function BAD_Chest:dolly_moved()
-  local e = self.output_entity
-  if e and e.valid then e.teleport(self.entity.position) end
+  for name, _ in pairs(OUTPUT_VALID_NAMES) do
+    local e = self[name]
+    if e and e.valid then e.teleport(self.entity.position) end
+  end
 end
 
 local LOGGING_SIGNAL = {name="signal-L", type="virtual"}
