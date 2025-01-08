@@ -101,6 +101,7 @@ local function on_mods_changed(event)
     if force.technologies["construction-robotics"]
     and force.technologies["construction-robotics"].researched then
       force.recipes["blueprint-deployer"].enabled = true
+      force.recipes["blueprint-deployer2"].enabled = true
       force.recipes["recursive-blueprints-scanner"].enabled = true
     end
   end
