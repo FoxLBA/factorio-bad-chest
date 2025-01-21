@@ -540,7 +540,7 @@ function BAD_Chest:main_logging(msg_type, vars)
     local target_gps  = make_gps_string(self:get_target_position(), surface)
     if deployer_gps == target_gps then target_gps = "" end
     local sub_msg = vars.sub_type
-    if not self:get_signal(FLAG_SIGNALS.cancel) > 0 then sub_msg = "cancel-" .. sub_msg end
+    if not (self:get_signal(FLAG_SIGNALS.cancel) > 0) then sub_msg = "cancel-" .. sub_msg end
     msg = {"recursive-blueprints-deployer-logging."..sub_msg, deployer_gps, get_bp_name(vars.bp), target_gps, make_area_string(self)}
 
   else
