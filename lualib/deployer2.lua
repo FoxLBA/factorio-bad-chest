@@ -1,3 +1,5 @@
+local Parametric = require"lualib.parameterization"
+
 local C_COMB_SECTIONS_WRITE_LIMIT = 20
 -- Command signals
 local COM_SIGNAL = {name="rbp-command", type="virtual"}
@@ -71,7 +73,7 @@ function BAD_Chest:tick()
   local com = self:get_signal(COM_SIGNAL)
   if com > 0 then
     if       com <  10 then  -- Item in inventory
-      if     com == 1 then -- Use item
+      if     com == 1 or com == 2 then -- Use item
         local bp = self.entity.get_inventory(defines.inventory.chest)[1]
         if not bp.valid_for_read then return end
         -- Pick item from blueprint book
@@ -85,7 +87,7 @@ function BAD_Chest:tick()
             if not bp.valid_for_read then return end
           end
         end
-        if bp.is_blueprint then self:deploy_blueprint(bp)
+        if bp.is_blueprint then self:deploy_blueprint(bp, com)
         elseif bp.is_deconstruction_item then self:deconstruct_area(bp)
         elseif bp.is_upgrade_item then self:upgrade_area(bp)
         end
@@ -136,7 +138,7 @@ function BAD_Chest:tick()
   end
 end
 
-function BAD_Chest:deploy_blueprint(bp)
+function BAD_Chest:deploy_blueprint(bp, com)
   if not bp.is_blueprint_setup() then return end
 
   -- Rotate
@@ -159,8 +161,20 @@ function BAD_Chest:deploy_blueprint(bp)
   end
   -- Build blueprint
   local e = self.entity
+  if com == 2 then
+    local new_bp = storage.plans[3][1]
+    new_bp.set_stack(bp)
+    local sate, result = pcall(Parametric, e.get_signals(self.input_main, self.input_alt), new_bp)
+    if not sate then
+      e.force.print(e.gps_tag .. " Blueprint parameterization error:\n" .. result)
+    else
+      bp = new_bp
+    end
+  end
+
   bp.build_blueprint{
     surface = e.surface,
+      ---@diagnostic disable-next-line: assign-type-mismatch
     force = e.force,
     position = position,
     direction = direction,

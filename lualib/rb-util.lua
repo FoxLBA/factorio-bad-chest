@@ -261,9 +261,11 @@ end
 
 local function create_common_bp_plans()
   if not storage.plans then
-    storage.plans = {game.create_inventory(1), game.create_inventory(1)}
+    storage.plans = {game.create_inventory(1), game.create_inventory(1), game.create_inventory(1)}
     storage.plans[1][1].set_stack("deconstruction-planner")
     storage.plans[2][1].set_stack("upgrade-planner")
+  elseif #storage.plans == 2 then
+    table.insert(storage.plans, game.create_inventory(1))
   end
 end
 

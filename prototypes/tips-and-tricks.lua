@@ -2,7 +2,7 @@ local function rbp_signals(list)
   if type(list) == "string" then
     return "[img=virtual-signal.rbp-"..list.."]"
   end
-  s = ""
+  local s = ""
   for _, name in pairs(list) do
     s = s.."[img=virtual-signal.rbp-"..name.."]"
   end
