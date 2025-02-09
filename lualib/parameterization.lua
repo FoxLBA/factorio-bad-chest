@@ -149,11 +149,15 @@ end
 --Constant combinator
 Controls.sections = function(value, p)
   local s = p.signals
+  local n = p.numbers
   for _, s1 in pairs(value) do
     for _, s2 in pairs(s1) do
       if not s2.group then
         for _, f in pairs(s2.filters) do
           replace_signal(f, s)
+          if n[f.count] then --replace number
+            f.count = n[f.count]
+          end
         end
       end
     end
