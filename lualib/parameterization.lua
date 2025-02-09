@@ -62,8 +62,10 @@ local function get_pattern_from_signals(signals)
     local d = num_dst[i]
     if d then
       pattern.numbers[s] = d
-      check = true
+    else
+      pattern.numbers[s] = 0
     end
+    check = true
   end
   pattern.nc = check
   return pattern
