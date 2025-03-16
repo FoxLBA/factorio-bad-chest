@@ -179,12 +179,15 @@ function Deployer.signal_filtred_deconstruction(deployer, deconstruct, whitelist
   for _, signal in pairs(deployer.get_signals(circuit_red, circuit_green)) do
     if signal.count > 0 then
       local s_name = signal.signal.name
-      if signal.signal.type == "item" then
+      if not signal.signal.type or signal.signal.type == "item" then
         local i_prototype = prototypes.item[s_name]
         if i_prototype.place_result then
           table.insert(list, i_prototype.place_result.name)
-          if i_prototype.curved_rail then
-            table.insert(list, i_prototype.curved_rail.name)
+          if i_prototype.rails then
+            for _, rail_p in pairs(i_prototype.rails) do
+              local n = rail_p.name
+              if not list[n] then table.insert(list, n) end
+            end
           end
         elseif i_prototype.place_as_tile_result then
           table.insert(list_tiles, i_prototype.place_as_tile_result.result.name)
