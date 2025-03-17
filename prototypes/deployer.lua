@@ -3,6 +3,7 @@ deployer.name = "blueprint-deployer"
 deployer.icon = "__rec-blue-plus__/graphics/blueprint-deployer-icon.png"
 deployer.minable.result = "blueprint-deployer"
 deployer.inventory_size = 1
+deployer.quality_affects_inventory_size = false
 deployer.inventory_type = "normal"
 deployer.se_allow_in_space = true
 deployer.picture.layers = {
@@ -61,7 +62,14 @@ data:extend{
   {
     type = "item",
     name = "blueprint-deployer2",
-    icon = "__rec-blue-plus__/graphics/blueprint-deployer-icon.png",
+    icons = {
+      {icon = "__rec-blue-plus__/graphics/blueprint-deployer-icon.png"},
+      {
+        icon = "__rec-blue-plus__/graphics/signals/deployer_command.png",
+        scale = 0.25,
+        shift = {-8, 8},
+      },
+    },
     icon_size = 64,
     inventory_move_sound = item_sounds.metal_chest_inventory_move,
     pick_sound = item_sounds.metal_chest_inventory_pickup,

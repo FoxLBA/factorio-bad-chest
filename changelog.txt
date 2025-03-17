@@ -1,8 +1,11 @@
 ---------------------------------------------------------------------------------------------------
 Version: 1.4.7
 Date: ????
+  Changes:
+    - A small change to the icon of the new deployer (BAD Chest).
   Bugfixes:
-    - Fixed old deployer siglal filtred deconstruction. Again.
+    - Fixed old deployer's "siglal filtred deconstruction". Again.
+    - [space-age] Quality does not affect deployers's storage size.
 ---------------------------------------------------------------------------------------------------
 Version: 1.4.6
 Date: 2025-02-09
@@ -47,7 +50,7 @@ Date: 2024-11-23
 Version: 1.4.1
 Date: 2024-11-19
   Features:
-    - The scanner can now see quality of buildings, ghosts and items on the ground.
+    - [space-age] The scanner can now see quality of buildings, ghosts and items on the ground.
   Changes:
     - The scanner GUI now shows the value of the input signal.
     - The scanner now uses a hidden entity to emit signals.
@@ -60,8 +63,8 @@ Date: 2024-10-28
     - Initial port to Factorio 2.0
     - Added signal ("F">0) for "Super force building".
   Changes:
-    - Removed depricatet function: Switching the train to automatic mode after construction from the BP.
-    - Removed depricatet setting: "Additional scanner output slots".
+    - Removed deprecated function: Switching the train to automatic mode after construction from the BP.
+    - Removed deprecated setting: "Additional scanner output slots".
     - By default, the "Area X,Y position" setting is now set to "Top left corner".
     - By default, the "Deploy signal for the deployer" setting is now set to "0 (Zero)".
 ---------------------------------------------------------------------------------------------------
