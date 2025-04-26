@@ -676,7 +676,7 @@ function AreaScannerGUI.update_scanner_gui(gui)
   minimap.position = c
   local largest = math.max(s[1], s[2])
   if largest == 0 then largest = 32 end
-  minimap.zoom = 8192 / largest -- * gui.gui.player.display_scale
+  minimap.zoom = 256 / largest -- * gui.gui.player.display_scale
   minimap.style.natural_width = s[1] / largest * 256
   minimap.style.natural_height = s[2] / largest * 256
 

@@ -6,6 +6,7 @@ Date: ????
   Bugfixes:
     - Fixed old deployer's "siglal filtred deconstruction". Again.
     - [space-age] Quality does not affect deployers's storage size.
+    - Fixed minimap scale in scanner GUI after API change.
 ---------------------------------------------------------------------------------------------------
 Version: 1.4.6
 Date: 2025-02-09
