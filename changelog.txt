@@ -1,6 +1,6 @@
 ---------------------------------------------------------------------------------------------------
 Version: 1.4.7
-Date: ????
+Date: 2025-04-27
   Changes:
     - A small change to the icon of the new deployer (BAD Chest).
   Bugfixes:

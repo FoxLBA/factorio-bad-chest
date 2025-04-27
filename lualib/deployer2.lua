@@ -2,6 +2,7 @@ local Parametric = require"lualib.parameterization"
 
 local C_COMB_SECTIONS_WRITE_LIMIT = 20
 -- Command signals
+local COMMANDS = {} --The list of commands is located at the end of this file.
 local COM_SIGNAL = {name="rbp-command", type="virtual"}
 local AREA_SIGNALS = {
   x = {name="signal-X", type="virtual"},
@@ -23,6 +24,8 @@ local OUTPUT_VALID_NAMES = {
   output_alt = true,
   output_compensate = true,
 }
+
+local function empty_func() end
 
 ---@class BAD_Chest
 ---@field entity LuaEntity
@@ -69,73 +72,38 @@ function BAD_Chest:destroy()
   storage.deployers2[self.id] = nil
 end
 
+
 function BAD_Chest:tick()
   local com = self:get_signal(COM_SIGNAL)
   if com > 0 then
-    if       com <  10 then  -- Item in inventory
-      if     com == 1 or com == 2 then -- Use item
-        local bp = self.entity.get_inventory(defines.inventory.chest)[1]
-        if not bp.valid_for_read then return end
-        -- Pick item from blueprint book
-        if bp.is_blueprint_book then
-          bp = self:pick_from_book(bp)
-          if not bp.valid_for_read then return end -- Got an empty slot
-          -- Pick active item from nested blueprint books if it is still a book.
-          while bp.is_blueprint_book do
-            if not bp.active_index then return end
-            bp = bp.get_inventory(defines.inventory.item_main)[bp.active_index]
-            if not bp.valid_for_read then return end
-          end
-        end
-        if bp.is_blueprint then self:deploy_blueprint(bp, com)
-        elseif bp.is_deconstruction_item then self:deconstruct_area(bp)
-        elseif bp.is_upgrade_item then self:upgrade_area(bp)
-        end
-      end
-    elseif   com <  30 then -- Deconstructions & Upgrades
-      if     com == 10 then -- Simple deconstruction
-        self:deconstruct_area(nil)
-      elseif com == 11 then -- Filtred deconstruction
-        self:signal_filtred_deconstruction()
-      --end
-    --elseif com < 30 then -- Upgrades
-      elseif com == 20 then -- Simple upgrade
-        local upg = storage.plans[2][1]
-        upg.clear_upgrade_item()
-        self:upgrade_area(upg)
-      end
-    elseif   com <  40 then  -- Remote c-comb
-      local c_comb = self:find_c_comb()
-      if not c_comb then return end
-      local behavior = c_comb.get_control_behavior() ---@cast behavior LuaConstantCombinatorControlBehavior
-      if not behavior and not behavior.valid then return end
-      if     com == 30 then -- Read signals from c_comb
-        self:read_from_c_comb(behavior)
-      elseif com == 31 then -- Write signals to c_comb
-        self:write_to_c_comb(behavior)
-      elseif com == 32 then -- On/Off remote c_comb
-        behavior.enabled = self:get_signal(FLAG_SIGNALS.invert) < 1
-      elseif com == 33 then -- Clear remote c_comb
-        RB_util.clear_constant_combinator(behavior)
-      end
-    elseif   com <  50 then -- I/O
-      if     com == 40 then -- Clear output
-        self:output_clear()
-      elseif com == 41 then -- Reset I/O
-        self:reset_IO()
-      end
-    elseif   com <  130 then -- BP managment
-      if     com == 100 then -- Simple copy
-        self:copy_blueprint(false)
-      elseif com == 120 then -- Delete blueprint item
-        local stack = self.entity.get_inventory(defines.inventory.chest)[1]
-        if RB_util.is_BP(stack) then
-          stack.clear()
-          self:logging("destroy_book", nil)
-        end
-      end
+    COMMANDS[com](self, com)
+  end
+end
+
+function BAD_Chest:use_item(com)
+  local bp = self.entity.get_inventory(defines.inventory.chest)[1]
+  if not bp.valid_for_read then return end
+  -- Pick item from blueprint book
+  if bp.is_blueprint_book then
+    bp = self:pick_from_book(bp)
+    if not bp.valid_for_read then return end -- Got an empty slot
+    -- Pick active item from nested blueprint books if it is still a book.
+    while bp.is_blueprint_book do
+      if not bp.active_index then return end
+      bp = bp.get_inventory(defines.inventory.item_main)[bp.active_index]
+      if not bp.valid_for_read then return end
     end
   end
+  if bp.is_blueprint then self:deploy_blueprint(bp, com)
+  elseif bp.is_deconstruction_item then self:deconstruct_area(bp)
+  elseif bp.is_upgrade_item then self:upgrade_area(bp)
+  end
+end
+
+function BAD_Chest:simple_upgrade()
+  local upg = storage.plans[2][1]
+  upg.clear_upgrade_item()
+  self:upgrade_area(upg)
 end
 
 function BAD_Chest:deploy_blueprint(bp, com)
@@ -186,6 +154,7 @@ function BAD_Chest:deploy_blueprint(bp, com)
 end
 
 function BAD_Chest:deconstruct_area(bp)
+  if type(bp) == "number" then bp = nil end
   local area = self:get_area()
   local surface = self.entity.surface
   local params = {
@@ -304,6 +273,34 @@ function BAD_Chest:copy_blueprint(from_exact)
         return
       end
     end
+  end
+end
+
+function BAD_Chest:simple_copy(com)
+  self:copy_blueprint(false)
+end
+
+function BAD_Chest:delete_item(com)
+  local stack = self.entity.get_inventory(defines.inventory.chest)[1]
+  if RB_util.is_BP(stack) then
+    stack.clear()
+    self:logging("destroy_book", nil)
+  end
+end
+
+function BAD_Chest:remote_c_comb(com)
+  local c_comb = self:find_c_comb()
+  if not c_comb then return end
+  local behavior = c_comb.get_control_behavior() ---@cast behavior LuaConstantCombinatorControlBehavior
+  if not behavior and not behavior.valid then return end
+  if     com == 30 then -- Read signals from c_comb
+    self:read_from_c_comb(behavior)
+  elseif com == 31 then -- Write signals to c_comb
+    self:write_to_c_comb(behavior)
+  elseif com == 32 then -- On/Off remote c_comb
+    behavior.enabled = self:get_signal(FLAG_SIGNALS.invert) < 1
+  elseif com == 33 then -- Clear remote c_comb
+    RB_util.clear_constant_combinator(behavior)
   end
 end
 
@@ -569,7 +566,6 @@ function BAD_Chest:main_logging(msg_type, vars)
   end
 end
 
-local function empty_func(_,_,_) end
 BAD_Chest.logging = empty_func
 
 function BAD_Chest.toggle_logging()
@@ -588,6 +584,21 @@ function BAD_Chest.toggle_logging()
   end
 end
 BAD_Chest.toggle_logging()
+
+COMMANDS[1]  = BAD_Chest.use_item
+COMMANDS[2]  = BAD_Chest.use_item -- blueprint parameterization
+COMMANDS[10] = BAD_Chest.deconstruct_area -- simple deconstruction
+COMMANDS[11] = BAD_Chest.signal_filtred_deconstruction
+COMMANDS[20] = BAD_Chest.simple_upgrade
+COMMANDS[30] = BAD_Chest.remote_c_comb -- read
+COMMANDS[31] = BAD_Chest.remote_c_comb -- write
+COMMANDS[32] = BAD_Chest.remote_c_comb -- toggle on/off
+COMMANDS[33] = BAD_Chest.remote_c_comb -- clear
+COMMANDS[40] = BAD_Chest.output_clear
+COMMANDS[41] = BAD_Chest.reset_IO
+COMMANDS[100] = BAD_Chest.simple_copy -- copy blueprint/book
+COMMANDS[120] = BAD_Chest.delete_item
+setmetatable(COMMANDS, {__index = function() return empty_func end}) -- do nothing by default
 
 script.register_metatable("Deployer2", BAD_Chest)
 return BAD_Chest
