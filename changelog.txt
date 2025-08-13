@@ -1,4 +1,9 @@
 ---------------------------------------------------------------------------------------------------
+Version: 1.4.8
+Date: 2025-08-13
+  Changes:
+    - Blueprint parameterization (BAD Chest's command #2) now can handle station names, train schedules, c-comb groups and [space-age] signals with quality.
+---------------------------------------------------------------------------------------------------
 Version: 1.4.7
 Date: 2025-04-27
   Changes:
@@ -11,7 +16,7 @@ Date: 2025-04-27
 Version: 1.4.6
 Date: 2025-02-09
   Features:
-    - Added blueprint parameterization (command #2)
+    - Added blueprint parameterization (BAD Chest's command #2)
   Bugfixes:
     - Fixed crahs with new deployer logging.
 ---------------------------------------------------------------------------------------------------

@@ -22,10 +22,11 @@ local function get_pattern_from_signals(signals)
   local num = {}
   for _, s in pairs(signals) do
     local n = s.signal.name
+    local nq = not s.signal.quality
     ---@diagnostic disable: need-check-nil
-    if char_list1[n] then num_src[char_list1[n]] = s.count end
-    if char_list2[n] then num_dst[char_list2[n]] = s.count end
-    if num_list[n] then
+    if nq and char_list1[n] then num_src[char_list1[n]] = s.count end
+    if nq and char_list2[n] then num_dst[char_list2[n]] = s.count end
+    if nq and num_list[n] then
       param[n] = s.count
     else
       if num[s.count] then
@@ -109,6 +110,38 @@ local function replace_filter(f, sp)
   end
 end
 
+local function get_replaced_string(str, sp)
+  if not str then return end
+  return string.gsub(str, "%[%a+=parameter%-%d%]", --"[item=parameter-0]"
+    function (s)
+      local par = string.sub(s,-12, -2) -- "parameter-X" substring
+      if sp[par] then
+        local q = sp[par].quality and ",quality="..sp[par].quality or ""
+        local t = (sp[par].type == "virtual") and "virtual-signal" or sp[par].type or "item"
+        return "["..t.."="..sp[par].name..q.."]"
+      end
+      return s
+  end)
+end
+
+local function replace_train_conditions(list, p)
+  if not list then return end
+  local s = p.signals
+  for _, wait_c in pairs(list) do
+    replace_condition(wait_c.condition, p)
+    wait_c.station = get_replaced_string(wait_c.station, s)
+  end
+end
+
+local function replace_train_targets(targets, p)
+  if not targets then return end
+  local s = p.signals
+  for _, station in pairs(targets) do
+    station.station = get_replaced_string(station.station, s)
+    replace_train_conditions(station.wait_conditions, p)
+  end
+end
+
 local function empty_func() end
 local Controls = {}
 setmetatable(Controls, {
@@ -154,7 +187,8 @@ Controls.sections = function(value, p)
   local n = p.numbers
   for _, s1 in pairs(value) do
     for _, s2 in pairs(s1) do
-      if not s2.group then
+      s2.group = get_replaced_string(s2.group, s)
+      if s2.filters then
         for _, f in pairs(s2.filters) do
           replace_signal(f, s)
           if n[f.count] then --replace number
@@ -229,6 +263,21 @@ local function parametric(signals, bp)
         end
         if g.icon then
           replace_signal(g.icon, s)
+        end
+        if g.station then
+          g.station = get_replaced_string(g.station, s)
+        end
+        if g.schedule then
+          local schedule = g.schedule
+          schedule.group = get_replaced_string(schedule.group, s)
+          replace_train_targets(schedule.records, pattern)
+          if schedule.interrupts then
+            for _, int in pairs(schedule.interrupts) do
+              int.name = get_replaced_string(int.name, s)
+              replace_train_conditions(int.conditions, pattern)
+              replace_train_targets(int.targets, pattern)
+            end
+          end
         end
         --[[
         if g["priority-list"] then
