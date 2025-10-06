@@ -79,6 +79,11 @@ function RB_util.find_charted_areas(force, surface, area)
   return result, counter
 end
 
+---@param a BoundingBox
+function RB_util.convert_BoundingBox_to_area(a)
+  return {{a.left_top.x, a.left_top.y}, {a.right_bottom.x, a.right_bottom.y}}
+end
+
 ---Subtract 1 pixel from the edges to avoid tile overlap.
 ---@param a BoundingBox
 ---@return BoundingBox
@@ -142,6 +147,14 @@ function RB_util.area_get_from_offsets(x, y, w, h)
   RB_util.area_normalize(area)
   RB_util.area_check_limits(area)
   return area
+end
+
+function RB_util.area_round_up(a)
+  a[1][1] = math.floor(a[1][1])
+  a[1][2] = math.floor(a[1][2])
+  a[2][1] = math.ceil(a[2][1])
+  a[2][2] = math.ceil(a[2][2])
+  return a
 end
 
 local function find_stack_in_entity(entity, item_name)

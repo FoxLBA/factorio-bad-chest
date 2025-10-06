@@ -1,4 +1,11 @@
 ---------------------------------------------------------------------------------------------------
+Version: 1.4.9
+Date: ????
+  Changes:
+    - Added a tool for calculating offsets.
+  Bugfixes:
+    - [space-age] Fixed mod entitis not working on a space platforms.
+---------------------------------------------------------------------------------------------------
 Version: 1.4.8
 Date: 2025-08-13
   Changes:
