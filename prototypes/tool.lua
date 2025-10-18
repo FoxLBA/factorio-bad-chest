@@ -2,6 +2,17 @@
 local tool_name = "rbp-tool"
 local item_sounds = require("__base__.prototypes.item_sounds")
 
+local c_comb_select
+if data.raw["constant-combinator"] then
+  c_comb_select =
+    {
+      border_color = {71, 255, 73},
+      mode = {"blueprint"},
+      entity_filters = {"constant-combinator"},
+      cursor_box_type = "spidertron-remote-to-be-selected",
+    }
+end
+
 data:extend{
   {
     type = "selection-tool",
@@ -27,7 +38,7 @@ data:extend{
       cursor_box_type = "spidertron-remote-to-be-selected",
     },
     --super_forced_select
-    --reverse_select
+    reverse_select = c_comb_select
     --alt_reverse_select
   },
   {

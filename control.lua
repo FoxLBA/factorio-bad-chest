@@ -1,11 +1,11 @@
 require "util"
-Deployer = require "lualib.deployer"
-Deployer2 = require "lualib.deployer2"
+local Deployer = require "lualib.deployer"
+local Deployer2 = require "lualib.deployer2"
 RB_util = require "lualib.rb-util"
 GUI_util = require "lualib.gui-util"
 AreaScannerGUI = require "lualib.scanner-gui"
 AreaScanner = require "lualib.scanner"
-OM_Tool = require "lualib.tool"
+local OC_Tool = require "lualib.tool"
 
 local function init_caches()
   RB_util.cache_in_storage()
@@ -322,8 +322,8 @@ script.on_event(defines.events.script_raised_built, on_built, filter)
 script.on_event(defines.events.script_raised_revive, on_built, filter)
 script.on_event(defines.events.on_space_platform_built_entity, on_built, filter)
 
-script.on_event(defines.events.on_player_selected_area, OM_Tool.on_player_selected_area)
-script.on_event(defines.events.on_player_alt_selected_area, OM_Tool.on_player_alt_selected_area)
---script.on_event(defines.events.on_player_reverse_selected_area, OM_Tool.on_player_reverse_selected_area)
+script.on_event(defines.events.on_player_selected_area, OC_Tool.on_player_selected_area)
+script.on_event(defines.events.on_player_alt_selected_area, OC_Tool.on_player_alt_selected_area)
+script.on_event(defines.events.on_player_reverse_selected_area, OC_Tool.on_player_reverse_selected_area)
 --script.on_event(defines.events.on_player_alt_reverse_selected_area, OM_Tool.on_player_alt_reverse_selected_area)
 --script.on_event(defines.events.on_mod_item_opened, OM_Tool.on_mod_item_opened)
