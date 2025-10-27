@@ -114,7 +114,7 @@ local function set_or_add_signals_to_constant_combinator(c_comb, filters)
   return false
 end
 
---RMB
+--RMB or Ctrl+LMB
 function F.on_player_reverse_selected_area(event)
   if event.item ~= tool_name then return end
   local player = game.get_player(event.player_index)

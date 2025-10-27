@@ -6,10 +6,10 @@ local c_comb_select
 if data.raw["constant-combinator"] then
   c_comb_select =
     {
-      border_color = {71, 255, 73},
+      border_color = {255, 24, 24},
       mode = {"blueprint"},
       entity_filters = {"constant-combinator"},
-      cursor_box_type = "spidertron-remote-to-be-selected",
+      cursor_box_type = "not-allowed",
     }
 end
 
@@ -35,7 +35,7 @@ data:extend{
     {
       border_color = {239, 153, 34},
       mode = {"blueprint"},
-      cursor_box_type = "spidertron-remote-to-be-selected",
+      cursor_box_type = "entity",
     },
     --super_forced_select
     reverse_select = c_comb_select
@@ -44,8 +44,8 @@ data:extend{
   {
     type = "custom-input",
     name = "give-"..tool_name,
-    key_sequence = "", --"ALT + A",
-    controller_key_sequence = "",-- "controller-lefttrigger + controller-y",
+    key_sequence = "",
+    controller_key_sequence = "",
     block_modifiers = true,
     consuming = "game-only",
     item_to_spawn = tool_name,
@@ -56,7 +56,6 @@ data:extend{
     name = "give-"..tool_name,
     order = "e["..tool_name.."]",
     action = "spawn-item",
-    --localised_name = {"shortcut.make-"..tool_name},
     associated_control_input = "give-"..tool_name,
     --technology_to_unlock = "construction-robotics",
     unavailable_until_unlocked = true,

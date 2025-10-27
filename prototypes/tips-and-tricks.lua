@@ -131,4 +131,23 @@ data:extend{
     dependencies = {"recursive-pb-common"},
     localised_name = {"entity-name.recursive-blueprints-scanner"},
   },
+  {
+    type = "tips-and-tricks-item",
+    name = "recursive-bp-offset-tool",
+    tag = "[item=rbp-tool]",
+    image = "__rec-blue-plus__/graphics/offset_tool_tnt.png",
+    --starting_status = "unlocked",
+    category = "recursive-pb-tips",
+    indent = 1,
+    order = "4",
+    dependencies = {"recursive-pb-common"},
+    localised_description = {
+      "",
+      {"rbp-tnt-description-parts.offset-tool0"}, "\n",
+      {"rbp-tnt-description-parts.offset-tool1"}, "\n",
+      {"rbp-tnt-description-parts.offset-tool2"}, "\n",
+      {"rbp-tnt-description-parts.offset-tool3"}, "\n",
+      {"rbp-tnt-description-parts.offset-tool4"},
+    }
+  },
 }
