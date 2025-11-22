@@ -26,8 +26,6 @@ data:extend{
     localised_description = {
       "tips-and-tricks-item-description.recursive-pb-common",
       {"mod-setting-name.recursive-blueprints-area"},
-      {"string-mod-setting.recursive-blueprints-area-corner"},
-      {"string-mod-setting.recursive-blueprints-area-center"},
     },
   },
   {
