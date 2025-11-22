@@ -4,13 +4,15 @@ Date: ????
   Features:
     - Added "Center of area" flag signal.
     - Added "Absolute coordinates" flag signal.
+    - Added per player options for the offset tool.
   Changes:
+    - The offset tool now writes new flags to the constant combinator.
   Bugfixes:
-    - Added to the description of the tool the possibility of writing to the constant combinator.
+    - Added to the description of the offset tool the possibility of writing to the constant combinator.
 ---------------------------------------------------------------------------------------------------
 Version: 1.4.9
 Date: 2025-10-18
-  Changes:
+  Features:
     - Added a tool for calculating offsets.
   Bugfixes:
     - [space-age] Fixed mod entitis not working on a space platforms.

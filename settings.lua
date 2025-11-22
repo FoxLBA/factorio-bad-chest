@@ -20,4 +20,18 @@ data:extend{
     default_value = "zero",
     allowed_values = {"construction_robot", "zero", "both"}
   },
+  {
+    type = "string-setting",
+    name = "recursive-blueprints-tool-area",
+    setting_type = "runtime-per-user",
+    default_value = "corner",
+    allowed_values = {"center", "corner"},
+  },
+  {
+    type = "string-setting",
+    name = "recursive-blueprints-tool-coordinates",
+    setting_type = "runtime-per-user",
+    default_value = "relative",
+    allowed_values = {"relative", "absolute"},
+  },
 }

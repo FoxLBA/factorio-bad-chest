@@ -1,44 +1,66 @@
 -- Offset calculation tool.
 local tool_name = "rbp-tool"
 local RB_util = RB_util
+local FLAG_SIGNALS = RBP_defines.FLAG_SIGNALS
 
 local F = {}
 
---LMB (calc offset)
+--LMB (calc area parameters)
 function F.on_player_selected_area(event)
   if event.item ~= tool_name then return end
   local player = game.get_player(event.player_index)
   if not player then return end
-  local record = storage.offset_tool_data or {}
-  if not record[event.player_index] then
-    player.print({"recursive-blueprints-tool.err-not-selected"})
-    return
+  if not storage.offset_tool_data then storage.offset_tool_data = {} end
+  local record = storage.offset_tool_data
+  local coord_flag = (settings.get_player_settings(event.player_index)["recursive-blueprints-tool-coordinates"].value == "relative") and -1 or 1
+  local e_pos = {0, 0}
+  if coord_flag <= 0 then
+    --relative
+    if not record[event.player_index] or not record[event.player_index].position then
+      player.print({"recursive-blueprints-tool.err-not-selected"})
+      return
+    end
+    record = record[event.player_index]
+    if (not record.surface) or (not record.surface.valid) or event.surface.index ~= record.surface.index then
+      player.print({"recursive-blueprints-tool.err-wrong-surface"})
+      return
+    end
+    e_pos = record.position
+  else
+    --absolute
+    if not record[event.player_index] then
+      record[event.player_index] = {}
+    end
+    record = record[event.player_index]
   end
-  record = record[event.player_index]
-  if (not record.surface) or (not record.surface.valid) or event.surface.index ~= record.surface.index then
-    player.print({"recursive-blueprints-tool.err-wrong-surface"})
-    return
-  end
+
   local area = RB_util.convert_BoundingBox_to_area(event.area)
   RB_util.area_round_up(area)
   local area_center, area_size = RB_util.area_find_center_and_size(area)
   local offset = {}
-  local e_pos = record.position
-  if settings.global["recursive-blueprints-area"].value == "corner" then
+  local area_flag = (settings.get_player_settings(event.player_index)["recursive-blueprints-tool-area"].value == "corner") and -1 or 1
+  if area_flag <= 0 then
     offset = {area[1][1] - e_pos[1], area[1][2] - e_pos[2]}
   else
     offset = {math.floor(area_center[1] - e_pos[1]), math.floor(area_center[2] - e_pos[2])}
   end
   record.last = {offset, area_size}
-  if 1200 < event.tick - record.tick then
-    player.print({"recursive-blueprints-tool.offsets", offset[1], offset[2], area_size[1], area_size[2], record.gps_tag})
-    record.tick = event.tick
+
+  if coord_flag <= 0 then
+    --relative
+    if 1200 < event.tick - record.tick then
+      player.print({"recursive-blueprints-tool.offsets", offset[1], offset[2], area_size[1], area_size[2], record.gps_tag})
+      record.tick = event.tick
+    else
+      player.print({"recursive-blueprints-tool.offsets-no-gps", offset[1], offset[2], area_size[1], area_size[2]})
+    end
   else
-    player.print({"recursive-blueprints-tool.offsets-no-gps", offset[1], offset[2], area_size[1], area_size[2]})
+    --absolute
+    player.print({"recursive-blueprints-tool.offsets", offset[1], offset[2], area_size[1], area_size[2], "(0,0)"})
   end
 end
 
---Shift + LMB (select entity)
+--Shift + LMB (select entity as reference point)
 function F.on_player_alt_selected_area(event)
   if event.item ~= tool_name then return end
   local player = game.get_player(event.player_index)
@@ -114,7 +136,7 @@ local function set_or_add_signals_to_constant_combinator(c_comb, filters)
   return false
 end
 
---RMB or Ctrl+LMB
+--RMB or Ctrl+LMB (Write to c-comb)
 function F.on_player_reverse_selected_area(event)
   if event.item ~= tool_name then return end
   local player = game.get_player(event.player_index)
@@ -125,11 +147,15 @@ function F.on_player_reverse_selected_area(event)
     return
   end
   local data = record[event.player_index].last
+  local area_flag = (settings.get_player_settings(event.player_index)["recursive-blueprints-tool-area"].value == "corner") and -1 or 1
+  local coord_flag = (settings.get_player_settings(event.player_index)["recursive-blueprints-tool-coordinates"].value == "relative") and -1 or 1
   local signals = {
     {value = "signal-X", min = data[1][1]},
     {value = "signal-Y", min = data[1][2]},
     {value = "signal-W", min = data[2][1]},
     {value = "signal-H", min = data[2][2]},
+    {value = FLAG_SIGNALS.center.name, min = area_flag},
+    {value = FLAG_SIGNALS.absolute.name, min = coord_flag},
   }
   if event.entities then
     for _, e in pairs(event.entities) do
