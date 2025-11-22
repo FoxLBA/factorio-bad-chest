@@ -671,7 +671,9 @@ function AreaScannerGUI.update_scanner_gui(gui)
 
   -- Update minimap
   scan_area = scanner.current
-  local c, s = RB_util.area_find_center_and_size(AreaScanner.get_scan_area(scanner.entity.position, scan_area))
+  local area = scanner.last_area
+  if not area then area = AreaScanner.get_scan_area(scanner.entity, scan_area) end
+  local c, s = RB_util.area_find_center_and_size(area)
   local minimap = gui.children[1].children[2].children[2].children[2].children[1]
   minimap.position = c
   local largest = math.max(s[1], s[2])

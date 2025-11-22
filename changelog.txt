@@ -1,4 +1,13 @@
 ---------------------------------------------------------------------------------------------------
+Version: 1.4.10
+Date: ????
+  Features:
+    - Added "Center of area" flag signal.
+    - Added "Absolute coordinates" flag signal.
+  Changes:
+  Bugfixes:
+    - Added to the description of the tool the possibility of writing to the constant combinator.
+---------------------------------------------------------------------------------------------------
 Version: 1.4.9
 Date: 2025-10-18
   Changes:

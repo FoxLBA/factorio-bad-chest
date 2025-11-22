@@ -1,7 +1,8 @@
 local Deployer = {}
 
-local circuit_red = defines.wire_connector_id.circuit_red
-local circuit_green = defines.wire_connector_id.circuit_green
+local circuit_red =   RBP_defines.circuit_red
+local circuit_green = RBP_defines.circuit_green
+local FLAG_SIGNALS =  RBP_defines.FLAG_SIGNALS
 -- Command signals
 local DEPLOY_SIGNAL = {name="construction-robot", type="item"}
 local DECONSTRUCT_SIGNAL = {name="deconstruction-planner", type="item"}
@@ -363,12 +364,14 @@ end
 
 function Deployer.get_area(deployer)
   local get_signal = deployer.get_signal
-  local position = deployer.position
   local area = RB_util.area_get_from_offsets(
-    get_signal(X_SIGNAL, circuit_red, circuit_green) + position.x - 0.5,
-    get_signal(Y_SIGNAL, circuit_red, circuit_green) + position.y - 0.5,
+    deployer.position,
+    get_signal(X_SIGNAL, circuit_red, circuit_green),
+    get_signal(Y_SIGNAL, circuit_red, circuit_green),
     get_signal(WIDTH_SIGNAL, circuit_red, circuit_green),
-    get_signal(HEIGHT_SIGNAL, circuit_red, circuit_green)
+    get_signal(HEIGHT_SIGNAL, circuit_red, circuit_green),
+    get_signal(FLAG_SIGNALS.center, circuit_red, circuit_green),
+    get_signal(FLAG_SIGNALS.absolute, circuit_red, circuit_green)
   )
   if area[1][1] == area[2][1] then area[2][1] = area[2][1] + 1 end
   if area[1][2] == area[2][2] then area[2][2] = area[2][2] + 1 end
@@ -381,22 +384,26 @@ function Deployer.get_area_signals(deployer)
 end
 
 function Deployer.get_target_position(deployer)
-  -- Shift x,y coordinates
-  local d_pos = deployer.position
   local get_signal = deployer.get_signal
-  local position = {
-    x = d_pos.x + get_signal(X_SIGNAL, circuit_red, circuit_green),
-    y = d_pos.y + get_signal(Y_SIGNAL, circuit_red, circuit_green),
+  local pos = { --point to the center of a tile.
+    x = get_signal(X_SIGNAL, circuit_red, circuit_green) + 0.5,
+    y = get_signal(Y_SIGNAL, circuit_red, circuit_green) + 0.5,
   }
+  -- Shift x,y coordinates
+  if get_signal(FLAG_SIGNALS.absolute, circuit_red, circuit_green)<=0 then
+    local d_pos = deployer.position
+    pos.x = pos.x + math.floor(d_pos.x)
+    pos.y = pos.y + math.floor(d_pos.y)
+  end
 
   -- Check for building out of bounds
-  if position.x > 8000000
-  or position.x < -8000000
-  or position.y > 8000000
-  or position.y < -8000000 then
+  if pos.x > 8000000
+  or pos.x < -8000000
+  or pos.y > 8000000
+  or pos.y < -8000000 then
     return
   end
-  return position
+  return pos
 end
 
 function Deployer.copy_blueprint(deployer)

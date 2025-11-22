@@ -128,9 +128,22 @@ function RB_util.area_normalize(a)
   return a
 end
 
-function RB_util.area_get_from_offsets(x, y, w, h)
+---comment
+---@param e_pos MapPosition
+---@param x int "X" signal
+---@param y int "Y" signal
+---@param w int width of area
+---@param h int height of area
+---@param i_center int is x&y are pointing to the center of the area?
+---@param i_abs int is x&y are absolute coordinates?
+---@return BoundingBox
+function RB_util.area_get_from_offsets(e_pos, x, y, w, h, i_center, i_abs)
   local area
-  if settings.global["recursive-blueprints-area"].value == "corner" then
+  if i_abs <= 0 then
+    x = x + math.floor(e_pos.x)
+    y = y + math.floor(e_pos.y)
+  end
+  if i_center<0 or (i_center==0 and (settings.global["recursive-blueprints-area"].value == "corner")) then
     area = {
       {x, y},
       {x + w, y + h}

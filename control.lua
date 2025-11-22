@@ -1,4 +1,5 @@
 require "util"
+RBP_defines = require "lualib.rpb-defines"
 local Deployer = require "lualib.deployer"
 local Deployer2 = require "lualib.deployer2"
 RB_util = require "lualib.rb-util"

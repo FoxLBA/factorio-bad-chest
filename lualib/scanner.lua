@@ -1,4 +1,9 @@
 local AreaScanner = {}
+
+local FLAG_SIGNALS = RBP_defines.FLAG_SIGNALS
+local circuit_red = RBP_defines.circuit_red
+local circuit_green = RBP_defines.circuit_green
+
 -- Military structures https://wiki.factorio.com/Military_units_and_structures
 local MILITARY_STRUCTURES_LIST = {
   "ammo-turret", "artillery-turret", "electric-turret",
@@ -69,9 +74,6 @@ local NEW_SCANNER_SETTINGS = {
     to_be_deconstructed = {signal = virtual_signal("recursive-blueprints-counter-to_be_deconstructed")},
   }
 }
-
-local circuit_red = defines.wire_connector_id.circuit_red
-local circuit_green = defines.wire_connector_id.circuit_green
 
 AreaScanner.FILTER_MASK_ORDER = {
   {group = "filters",  name = "blank"},
@@ -352,7 +354,7 @@ function AreaScanner.scan_resources(scanner)
   local force = scanner.entity.force
   local surface = scanner.entity.surface
   local scan_area_settings = scanner.current
-  local scan_area = AreaScanner.get_scan_area(scanner.entity.position, scan_area_settings)
+  local scan_area = AreaScanner.get_scan_area(scanner.entity, scan_area_settings, scanner)
   local filter = scan_area_settings.filter --Refer to AreaScanner.FILTER_MASK_ORDER to understand the meaning of bitmasks.
 
   local areas, uncharted = RB_util.find_charted_areas(force, surface, scan_area)
@@ -867,16 +869,23 @@ function AreaScanner.toggle_default_settings()
 end
 
 ---Calculate the scanning area based on the position and settings of the scanner.
----@param scaner_position MapPosition
+---@param scaner_entity LuaEntity
 ---@param area_settings table
+---@param scanner table | nil
 ---@return BoundingBox
-function AreaScanner.get_scan_area(scaner_position, area_settings)
-  return RB_util.area_get_from_offsets(
-      scaner_position.x + area_settings.x,
-      scaner_position.y + area_settings.y,
+function AreaScanner.get_scan_area(scaner_entity, area_settings, scanner)
+  local get_signal = scaner_entity.get_signal
+  local area = RB_util.area_get_from_offsets(
+      scaner_entity.position,
+      area_settings.x,
+      area_settings.y,
       area_settings.width,
-      area_settings.height
+      area_settings.height,
+      get_signal(FLAG_SIGNALS.center,   circuit_red, circuit_green),
+      get_signal(FLAG_SIGNALS.absolute, circuit_red, circuit_green)
     )
+  if scanner then scanner.last_area = area end
+  return area
 end
 
 --AreaScanner.toggle_default_settings()

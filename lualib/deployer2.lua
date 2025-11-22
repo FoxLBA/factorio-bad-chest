@@ -3,26 +3,13 @@ local Parametric = require"lualib.parameterization"
 local C_COMB_SECTIONS_WRITE_LIMIT = 20
 -- Command signals
 local COMMANDS = {} --The list of commands is located at the end of this file.
-local COM_SIGNAL = {name="rbp-command", type="virtual"}
-local AREA_SIGNALS = {
-  x = {name="signal-X", type="virtual"},
-  y = {name="signal-Y", type="virtual"},
-  w = {name="signal-W", type="virtual"},
-  h = {name="signal-H", type="virtual"},
-}
-local FLAG_SIGNALS = {
-  rotate =     {name="rbp-rotate-bp",     type="virtual"},
-  superforce = {name="rbp-superforce",    type="virtual"},
-  cancel =     {name="rbp-cancel",        type="virtual"},
-  invert =     {name="rbp-invert-filter", type="virtual"},
-  enviroment = {name="rbp-enviroment",    type="virtual"},
-  quality =    {name="rbp-quality",       type="virtual"},
-}
-local BOOK_SIGNALS = {}
-for i = 1, 6 do table.insert(BOOK_SIGNALS, {name="rbp-book-layer"..i, type="virtual"}) end
+local COM_SIGNAL   = RBP_defines.COM_SIGNAL
+local AREA_SIGNALS = RBP_defines.AREA_SIGNALS
+local FLAG_SIGNALS = RBP_defines.FLAG_SIGNALS
+local BOOK_SIGNALS = RBP_defines.BOOK_SIGNALS
 local OUTPUT_VALID_NAMES = {
-  output_alt = true,
-  output_compensate = true,
+  output_alt = true, -- hidden c-comb that emits output signals.
+  output_compensate = true, -- hidden c-comb that emits -1 of item stored in BAD_Chest.
 }
 
 local function empty_func() end
@@ -412,33 +399,41 @@ function BAD_Chest:separete_comm_inputs()
 end
 
 function BAD_Chest:get_target_position()
-  -- Shift x,y coordinates
-  local d_pos = self.entity.position
-  local position = {
-    x = d_pos.x + self:get_signal(AREA_SIGNALS.x),
-    y = d_pos.y + self:get_signal(AREA_SIGNALS.y),
+  local pos = { --point to the center of a tile.
+    x = self:get_signal(AREA_SIGNALS.x) + 0.5,
+    y = self:get_signal(AREA_SIGNALS.y) + 0.5,
   }
+  -- Shift x,y coordinates
+  if self:get_signal(FLAG_SIGNALS.absolute)<=0 then
+    local d_pos = self.entity.position
+    pos.x = pos.x + math.floor(d_pos.x)
+    pos.y = pos.y + math.floor(d_pos.y)
+  end
 
   -- Check for building out of bounds (map limit 2^23 = 8'388'608)
-  if position.x > 8000000
-  or position.x < -8000000
-  or position.y > 8000000
-  or position.y < -8000000 then
+  if pos.x > 8000000
+  or pos.x < -8000000
+  or pos.y > 8000000
+  or pos.y < -8000000 then
     return
   end
-  return position
+  self.last_target = {x = pos.x, y = pos.y}
+  return pos
 end
 
 function BAD_Chest:get_area()
-  local position = self.entity.position
   local area = RB_util.area_get_from_offsets(
-    self:get_signal(AREA_SIGNALS.x) + position.x - 0.5,
-    self:get_signal(AREA_SIGNALS.y) + position.y - 0.5,
+    self.entity.position,
+    self:get_signal(AREA_SIGNALS.x),
+    self:get_signal(AREA_SIGNALS.y),
     self:get_signal(AREA_SIGNALS.w),
-    self:get_signal(AREA_SIGNALS.h)
+    self:get_signal(AREA_SIGNALS.h),
+    self:get_signal(FLAG_SIGNALS.center),
+    self:get_signal(FLAG_SIGNALS.absolute)
   )
   if area[1][1] == area[2][1] then area[2][1] = area[2][1] + 1 end
   if area[1][2] == area[2][2] then area[2][2] = area[2][2] + 1 end
+  self.last_area = {{area[1][1], area[1][2]}, {area[2][1], area[2][2]}}
   return RB_util.area_shrink_1_pixel(area)
 end
 
@@ -527,9 +522,9 @@ local function get_bp_name(bp)
   return bp.label
 end
 
-local function make_area_string(deployer)
-  if not deployer then return "" end
-  return " W=" .. deployer:get_signal(AREA_SIGNALS.w) .. " H=" .. deployer:get_signal(AREA_SIGNALS.h)
+local function make_area_string(size)
+  if not size then return "" end
+  return " W=" .. size[1] .. " H=" .. size[2]
 end
 
 function BAD_Chest:main_logging(msg_type, vars)
@@ -543,16 +538,17 @@ function BAD_Chest:main_logging(msg_type, vars)
 
   --"point_deploy" "area_deploy" "self_deconstruct" "destroy_book" "copy_book"
   if msg_type == "point_deploy" then
-    local target_gps = make_gps_string(self:get_target_position(), surface)
+    local target_gps = make_gps_string(self.last_target, surface)
     if deployer_gps == target_gps then target_gps = "" end
     msg = {"recursive-blueprints-deployer-logging.deploy-bp", deployer_gps, get_bp_name(vars.bp), target_gps}
 
   elseif msg_type == "area_deploy" then
-    local target_gps  = make_gps_string(self:get_target_position(), surface)
+    local c, s = RB_util.area_find_center_and_size(self.last_area)
+    local target_gps  = make_gps_string({x = c[1], y = c[2]}, surface)
     if deployer_gps == target_gps then target_gps = "" end
     local sub_msg = vars.sub_type
     if not (self:get_signal(FLAG_SIGNALS.cancel) > 0) then sub_msg = "cancel-" .. sub_msg end
-    msg = {"recursive-blueprints-deployer-logging."..sub_msg, deployer_gps, get_bp_name(vars.bp), target_gps, make_area_string(self)}
+    msg = {"recursive-blueprints-deployer-logging."..sub_msg, deployer_gps, get_bp_name(vars.bp), target_gps, make_area_string(s)}
 
   else
     msg = {"recursive-blueprints-deployer-logging.unknown", deployer_gps, msg_type}

@@ -29,7 +29,7 @@ deployer.picture.layers = {
 local deployer2 = table.deepcopy(deployer)
 deployer2.name = "blueprint-deployer2"
 deployer2.minable.result = "blueprint-deployer2"
-deployer2.localised_description = {"", {"recursive-blueprints.wip-note"}, "\n", {"item-description.blueprint-deployer2"}}
+--deployer2.localised_description = {"", {"recursive-blueprints.wip-note"}, "\n", {"item-description.blueprint-deployer2"}}
 
 local item_sounds = require("__base__.prototypes.item_sounds")
 data:extend{
