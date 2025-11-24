@@ -320,6 +320,7 @@ end
 local function count_placeable(prototypes, source, dest, merge)
   --source[quality][name]=count
   --dest[type][quality][name]=count
+  local w_list = storage.buildings_without_item_to_place or {}
   if not source then return 0 end
   local counter = 0
   if merge then
@@ -330,6 +331,10 @@ local function count_placeable(prototypes, source, dest, merge)
           counter = counter + count
           local i_name = itpt[1].name
           dest.item[q][i_name] = (dest.item[q][i_name] or 0) + (itpt[1].count or 0) * count
+        elseif w_list[name] then
+          counter = counter + count
+          if not dest.entity then dest.entity = RB_util.get_quality_lists() end
+          dest.entity[q][name] = (dest.entity[q][name] or 0) + count
         end
       end
     end
@@ -337,7 +342,7 @@ local function count_placeable(prototypes, source, dest, merge)
     for _, q_list in pairs(source) do
       for name, count in pairs(q_list) do
         local itpt = prototypes[name].items_to_place_this
-        if itpt and (#itpt > 0) then
+        if (itpt and (#itpt > 0)) or w_list[name] then
           counter = counter + count
         end
       end

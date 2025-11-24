@@ -132,6 +132,8 @@ function GUI_util.get_signal_sprite(signal)
     return "fluid/" .. signal.name
   elseif signal.type == "virtual" and prototypes.virtual_signal[signal.name] then
     return "virtual-signal/" .. signal.name
+  elseif signal.type == "entity" and prototypes.entity[signal.name] then
+    return "entity/" .. signal.name
   end
 end
 

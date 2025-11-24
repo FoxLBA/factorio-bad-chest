@@ -295,11 +295,26 @@ local function create_common_bp_plans()
   end
 end
 
+local function find_buildings_without_item()
+  local list = {}
+  local filter = {
+    {filter = "flag", flag = "player-creation"},
+    {filter = "minable", mode = "and"},
+    {filter = "blueprintable",invert = true, mode = "and"},
+    {filter = "hidden", invert = true, mode = "and"},
+  }
+  for _, e in pairs(prototypes.get_entity_filtered(filter)) do
+    if not e.items_to_place_this then list[e.name] = true end
+  end
+  storage.buildings_without_item_to_place = list
+end
+
 function RB_util.cache_in_storage()
   cache_blueprint_signals() --storage.blueprint_signals
   cache_rocks_names() --storage.rocks_names, storage.rocks_names2
   cache_quality_names() --storage.quality_names, storage.quality_levels
   create_common_bp_plans() --storage.plans
+  find_buildings_without_item() --storage.buildings_without_item_to_place
 end
 
 function RB_util.get_quality_lists()

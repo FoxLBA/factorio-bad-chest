@@ -9,6 +9,7 @@ Date: ????
     - The offset tool now writes new flags to the constant combinator.
   Bugfixes:
     - Added to the description of the offset tool the possibility of writing to the constant combinator.
+    - The scanner can now see buildings that don't have an items_to_place_this (like "cargo-pod-container").
 ---------------------------------------------------------------------------------------------------
 Version: 1.4.9
 Date: 2025-10-18
