@@ -1,6 +1,6 @@
 ---------------------------------------------------------------------------------------------------
 Version: 1.4.10
-Date: ????
+Date: 2025-11-24
   Features:
     - Added "Center of area" flag signal.
     - Added "Absolute coordinates" flag signal.
@@ -9,7 +9,9 @@ Date: ????
     - The offset tool now writes new flags to the constant combinator.
   Bugfixes:
     - Added to the description of the offset tool the possibility of writing to the constant combinator.
-    - The scanner can now see buildings that don't have an items_to_place_this (like "cargo-pod-container").
+    - The scanner can now see buildings that don't have an "items_to_place_this" (like "cargo-pod-container").
+    - Signal filtred deconstruction (BAD Chest's command #11) can also filter such buildings.
+    - Signal filtred deconstruction (BAD Chest's command #11) can filter union signals: "Entity ghost", "Item on ground", "Item request proxy", "Tile ghost".
 ---------------------------------------------------------------------------------------------------
 Version: 1.4.9
 Date: 2025-10-18

@@ -26,4 +26,11 @@ defs.FLAG_SIGNALS = {
 defs.BOOK_SIGNALS = {}
 for i = 1, 6 do table.insert(defs.BOOK_SIGNALS, {name="rbp-book-layer"..i, type="virtual"}) end
 
+defs.UNION_SIGNALS_LIST = {
+  ["entity-ghost"] = true,
+  ["item-on-ground"] = true,
+  ["item-request-proxy"] = true,
+  ["tile-ghost"] = true,
+}
+
 return defs

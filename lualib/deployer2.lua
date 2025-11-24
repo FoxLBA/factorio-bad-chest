@@ -7,6 +7,7 @@ local COM_SIGNAL   = RBP_defines.COM_SIGNAL
 local AREA_SIGNALS = RBP_defines.AREA_SIGNALS
 local FLAG_SIGNALS = RBP_defines.FLAG_SIGNALS
 local BOOK_SIGNALS = RBP_defines.BOOK_SIGNALS
+local UNION_SIGNALS_LIST = RBP_defines.UNION_SIGNALS_LIST
 local OUTPUT_VALID_NAMES = {
   output_alt = true, -- hidden c-comb that emits output signals.
   output_compensate = true, -- hidden c-comb that emits -1 of item stored in BAD_Chest.
@@ -180,6 +181,7 @@ end
 function BAD_Chest:signal_filtred_deconstruction()
   local list = {}
   local list_tiles = {}
+  local w_list = storage.buildings_without_item_to_place
   -- Read filtred items from signals.
   ---@diagnostic disable-next-line: param-type-mismatch
   for _, signal in pairs(self.entity.get_signals(defines.wire_connector_id.circuit_red, defines.wire_connector_id.circuit_green)) do
@@ -195,6 +197,8 @@ function BAD_Chest:signal_filtred_deconstruction()
             table.insert(list_tiles, i_prototype.place_as_tile_result.result.name)
           end
         end
+      elseif signal.signal.type == "entity" and (w_list[s_name] or UNION_SIGNALS_LIST[s_name]) then
+        table.insert(list, {type = "entity", name = s_name, quality = signal.signal.quality or "normal", comparator = "="})
       end
     end
   end
@@ -207,7 +211,7 @@ function BAD_Chest:signal_filtred_deconstruction()
       local name = item.name
       if not index[name] then
         index[name] = true
-        table.insert(tmp, {name = name})
+        table.insert(tmp, {type = item.type, name = name})
       end
     end
     list = tmp
