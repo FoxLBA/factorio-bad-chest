@@ -2,6 +2,7 @@
 Version: 1.4.11
 Date: ????
   Features:
+    - The old deployer is now hidden.
     - Added "Wait before repeat" signal.
   Bugfixes:
     - Fixed incorrect logging when a BAD chest applies/cancels deconstruction.

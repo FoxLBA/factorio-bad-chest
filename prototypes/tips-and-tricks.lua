@@ -35,7 +35,7 @@ data:extend{
     --starting_status = "unlocked",
     category = "recursive-pb-tips",
     indent = 1,
-    order = "1",
+    order = "99",
     dependencies = {"recursive-pb-common"},
     localised_name = {"entity-name.blueprint-deployer"},
     localised_description = {
@@ -66,7 +66,7 @@ data:extend{
   {
     type = "tips-and-tricks-item",
     name = "recursive-pb-deployer2",
-    tag = "[item=blueprint-deployer]",
+    tag = "[item=blueprint-deployer2]",
     --starting_status = "unlocked",
     category = "recursive-pb-tips",
     indent = 1,

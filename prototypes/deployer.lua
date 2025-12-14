@@ -28,8 +28,10 @@ deployer.picture.layers = {
 }
 local deployer2 = table.deepcopy(deployer)
 deployer2.name = "blueprint-deployer2"
-deployer2.minable.result = "blueprint-deployer2"
---deployer2.localised_description = {"", {"recursive-blueprints.wip-note"}, "\n", {"item-description.blueprint-deployer2"}}
+deployer2.minable.result = deployer2.name
+
+deployer.hidden = true
+deployer.hidden_in_factoriopedia = true
 
 local item_sounds = require("__base__.prototypes.item_sounds")
 data:extend{
@@ -46,17 +48,21 @@ data:extend{
     order = "c[signal]-b[blueprint-deployer]",
     place_result = "blueprint-deployer",
     stack_size = 50,
+    hidden = true,
+    hidden_in_factoriopedia = true,
   },
   {
     type = "recipe",
     name = "blueprint-deployer",
     results = {{type="item", name="blueprint-deployer", amount=1}},
-    enabled = false,
+    enabled = true,
     ingredients = {
       {type="item", name="steel-chest", amount=1},
       {type="item", name="electronic-circuit", amount=3},
       {type="item", name="advanced-circuit", amount=1},
     },
+    hidden = true,
+    hidden_in_factoriopedia = true,
   },
   deployer2,
   {
