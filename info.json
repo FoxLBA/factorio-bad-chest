@@ -1,7 +1,7 @@
 {
   "name":"rec-blue-plus",
   "author":"Doc, justarandomgeek, DaveMcW, FoxLBA",
-  "version": "1.4.10",
+  "version": "1.4.11",
   "title":"Recursive Blueprints+",
   "homepage":"",
   "description":"Automate blueprints to build a self-expanding factory.\nFork of Recursive Blueprints with new small features.",

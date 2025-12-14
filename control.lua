@@ -132,10 +132,10 @@ local function on_setting_changed(event)
   end
 end
 
-local function on_tick()
+local function on_tick(event)
   Deployer.on_tick()
   AreaScanner.on_tick()
-  Deployer2.on_tick()
+  Deployer2.on_tick(event)
 end
 
 local function on_built(event)

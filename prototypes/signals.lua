@@ -37,8 +37,15 @@ for i = 1, 6 do
     })
 end
 
-local deployer = {"command", "cancel", "enviroment", "invert-filter", "rotate-bp", "superforce", "quality", "center", "absolute"}
+local deployer = {
+  "command", "cancel", "enviroment", "invert-filter", "rotate-bp",
+  "superforce", "quality", "center", "absolute", "wait",
+}
 for i, name in pairs(deployer) do
+  local hidden = nil
+  if (name == "quality") and (not mods["quality"]) then
+    hidden = true
+  end
   table.insert(
     rbp_signals,
     {
@@ -47,7 +54,7 @@ for i, name in pairs(deployer) do
       icon = "__rec-blue-plus__/graphics/signals/deployer_"..name..".png",
       subgroup = "recursive-blueprints-signals",
       order = "c-"..i,
-      hidden = (name == "quality") and (not mods["quality"])
+      hidden = hidden,
     })
 end
 

@@ -21,6 +21,7 @@ defs.FLAG_SIGNALS = {
   quality =    {name="rbp-quality",       type="virtual"},
   center =     {name="rbp-center",        type="virtual"},
   absolute =   {name="rbp-absolute",      type="virtual"},
+  wait =       {name="rbp-wait",          type="virtual"},
 }
 
 defs.BOOK_SIGNALS = {}

@@ -23,6 +23,7 @@ local function empty_func() end
 ---@field input_alt defines.wire_connector_id
 ---@field output_alt nil|LuaEntity
 ---@field output_compensate nil|LuaEntity
+---@field wait nil|table
 local BAD_Chest = {}
 BAD_Chest.__index = BAD_Chest
 
@@ -45,10 +46,10 @@ function BAD_Chest.on_destroy(id)
   if deployer then deployer:destroy() end
 end
 
-function BAD_Chest.on_tick()
+function BAD_Chest.on_tick(event)
   for _, obj in pairs(storage.deployers2) do
     if obj.entity.valid then
-      obj:tick()
+      obj:tick(event)
     else
       obj:destroy()
     end
@@ -61,9 +62,27 @@ function BAD_Chest:destroy()
 end
 
 
-function BAD_Chest:tick()
+function BAD_Chest:tick(event)
   local com = self:get_signal(COM_SIGNAL)
+  local wait_param = 0
+  local sw = self.wait
+  if sw then
+    wait_param = self:get_signal(FLAG_SIGNALS.wait)
+    if (event.tick < sw.wait_until) and (sw.com == com) and (sw.delay == wait_param) then
+      return
+    else
+      self.wait = nil
+    end
+  end
   if com > 0 then
+    wait_param = self:get_signal(FLAG_SIGNALS.wait)
+    if wait_param > 1 then
+      self.wait = {
+        com = com,
+        delay = wait_param,
+        wait_until = event.tick + wait_param,
+      }
+    end
     COMMANDS[com](self, com)
   end
 end
@@ -551,7 +570,7 @@ function BAD_Chest:main_logging(msg_type, vars)
     local target_gps  = make_gps_string({x = c[1], y = c[2]}, surface)
     if deployer_gps == target_gps then target_gps = "" end
     local sub_msg = vars.sub_type
-    if not (self:get_signal(FLAG_SIGNALS.cancel) > 0) then sub_msg = "cancel-" .. sub_msg end
+    if (self:get_signal(FLAG_SIGNALS.cancel) > 0) then sub_msg = "cancel-" .. sub_msg end
     msg = {"recursive-blueprints-deployer-logging."..sub_msg, deployer_gps, get_bp_name(vars.bp), target_gps, make_area_string(s)}
 
   else
