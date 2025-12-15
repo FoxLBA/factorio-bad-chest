@@ -78,6 +78,7 @@ data:extend{
       {"",
         {"item-description.blueprint-deployer2"}, "\n",
         {"rbp-tnt-description-parts.deployer2-intro", rbp_signals("command")}, "\n\n",
+        {"rbp-tnt-description-parts.deployer2-timings", rbp_signals("wait"), rbp_signals("command")}, "\n\n",
         {"rbp-tnt-description-parts.deployer2-navigation", "[virtual-signal=rbp-book-layer1]"}, "\n",
         {"rbp-tnt-description-parts.book-navigation", "[img=virtual-signal.rbp-book-layer1]", "[img=virtual-signal.rbp-book-layer2]", "[img=virtual-signal.rbp-book-layer3]", "[img=virtual-signal.rbp-book-layer6]"}, "\n\n",
         {"rbp-tnt-description-parts.deployer2-wires", rbp_signals("command")}, "\n\n",

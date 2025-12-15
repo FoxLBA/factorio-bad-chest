@@ -4,7 +4,7 @@
   "version": "1.4.11",
   "title":"Recursive Blueprints+",
   "homepage":"",
-  "description":"Automate blueprints to build a self-expanding factory.\nFork of Recursive Blueprints with new small features.",
+  "description":"Automate blueprints to build a self-expanding factory.\nFork of Recursive Blueprints with new features.",
   "dependencies": ["base>=2.0.12", "!recursive-blueprints"],
   "factorio_version": "2.0",
   "package": {"ignore": ["README.md", "docs/*", "graphics/*.psd", "graphics/*.xcf", "graphics/signals/*.xcf"]}
