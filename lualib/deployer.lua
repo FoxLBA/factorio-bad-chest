@@ -385,9 +385,9 @@ end
 
 function Deployer.get_target_position(deployer)
   local get_signal = deployer.get_signal
-  local pos = { --point to the center of a tile.
-    x = get_signal(X_SIGNAL, circuit_red, circuit_green) + 0.5,
-    y = get_signal(Y_SIGNAL, circuit_red, circuit_green) + 0.5,
+  local pos = {
+    x = get_signal(X_SIGNAL, circuit_red, circuit_green),
+    y = get_signal(Y_SIGNAL, circuit_red, circuit_green),
   }
   -- Shift x,y coordinates
   if get_signal(FLAG_SIGNALS.absolute, circuit_red, circuit_green)<=0 then

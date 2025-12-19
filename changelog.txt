@@ -1,4 +1,9 @@
 ---------------------------------------------------------------------------------------------------
+Version: 1.4.12
+Date: ????
+  Bugfixes:
+    - Fixed incorrect placement of blueprints under certain circumstances. (offset by 1 cell down and 1 right. Appeared in version 1.4.10)
+---------------------------------------------------------------------------------------------------
 Version: 1.4.11
 Date: 2025-12-15
   Features:

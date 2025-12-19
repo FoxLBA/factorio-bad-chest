@@ -422,9 +422,9 @@ function BAD_Chest:separete_comm_inputs()
 end
 
 function BAD_Chest:get_target_position()
-  local pos = { --point to the center of a tile.
-    x = self:get_signal(AREA_SIGNALS.x) + 0.5,
-    y = self:get_signal(AREA_SIGNALS.y) + 0.5,
+  local pos = {
+    x = self:get_signal(AREA_SIGNALS.x),
+    y = self:get_signal(AREA_SIGNALS.y),
   }
   -- Shift x,y coordinates
   if self:get_signal(FLAG_SIGNALS.absolute)<=0 then
