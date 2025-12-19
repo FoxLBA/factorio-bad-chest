@@ -1,6 +1,8 @@
 ---------------------------------------------------------------------------------------------------
 Version: 1.4.12
-Date: ????
+Date: 2025-12-19
+  Features:
+    - Added "BAD Chest Area Indicator" tool. (thanks to Xeon257)
   Bugfixes:
     - Fixed incorrect placement of blueprints under certain circumstances. (offset by 1 cell down and 1 right. Appeared in version 1.4.10)
 ---------------------------------------------------------------------------------------------------

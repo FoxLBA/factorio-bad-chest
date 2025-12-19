@@ -1,13 +1,14 @@
 -- Offset calculation tool.
-local tool_name = "rbp-tool"
+local offset_tool_name = "rbp-tool"
+local area_view_tool_name = "rbp-area-viewer"
 local RB_util = RB_util
 local FLAG_SIGNALS = RBP_defines.FLAG_SIGNALS
 
 local F = {}
 
 --LMB (calc area parameters)
-function F.on_player_selected_area(event)
-  if event.item ~= tool_name then return end
+local function offset_tool_LMB(event)
+  if event.item ~= offset_tool_name then return end
   local player = game.get_player(event.player_index)
   if not player then return end
   if not storage.offset_tool_data then storage.offset_tool_data = {} end
@@ -60,9 +61,57 @@ function F.on_player_selected_area(event)
   end
 end
 
+local function area_view(event)
+  if event.item == area_view_tool_name then
+    local player = game.get_player(event.player_index)
+    if player and player.valid then 
+      for _, e in pairs(event.entities) do
+        local area = nil
+        local actual_area = nil
+        if e.name == "blueprint-deployer2" then
+          BAD = storage.deployers2[e.unit_number]
+          if BAD then
+            actual_area = BAD:get_area()
+            area = BAD.last_area --area before srink
+          end
+        elseif e.name == "recursive-blueprints-scanner" then
+          scanner = storage.scanners[e.unit_number]
+          area = scanner.last_area
+          if not area then area = AreaScanner.get_scan_area(scanner.entity, scanner.current) end
+          actual_area = area
+        end
+
+        if area and actual_area then
+          rendering.draw_rectangle {
+            surface = e.surface,
+            color = {128, 128, 255, 64},
+            left_top = {actual_area[1][1], actual_area[1][2]},
+            right_bottom = {actual_area[2][1], actual_area[2][2]},
+            time_to_live = 600,
+            players = {event.player_index},
+            filled = true,
+          }
+
+          local center, _ = RB_util.area_find_center_and_size(area)
+          player.print(
+            string.format("P1[%d, %d], P2[%d, %d]", area[1][1], area[1][2], area[2][1], area[2][2])
+            ..string.format(", Center : [gps=%d,%d,%s]", center[1], center[2], e.surface.name)
+          )
+        end
+      end
+    end
+  end
+end
+
+-- LMB
+function F.on_player_selected_area(event)
+  offset_tool_LMB(event)
+  area_view(event)
+end
+
 --Shift + LMB (select entity as reference point)
 function F.on_player_alt_selected_area(event)
-  if event.item ~= tool_name then return end
+  if event.item ~= offset_tool_name then return end
   local player = game.get_player(event.player_index)
   if not player then return end
   if event.entities then
@@ -138,7 +187,7 @@ end
 
 --RMB or Ctrl+LMB (Write to c-comb)
 function F.on_player_reverse_selected_area(event)
-  if event.item ~= tool_name then return end
+  if event.item ~= offset_tool_name then return end
   local player = game.get_player(event.player_index)
   if not player then return end
   local record = storage.offset_tool_data or {}

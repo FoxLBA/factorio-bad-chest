@@ -24,8 +24,9 @@ data:extend{
     category = "recursive-pb-tips",
     order = "0",
     localised_description = {
-      "tips-and-tricks-item-description.recursive-pb-common",
-      {"mod-setting-name.recursive-blueprints-area"},
+      "",
+      {"tips-and-tricks-item-description.recursive-pb-common", {"mod-setting-name.recursive-blueprints-area"}}, "\n\n",
+      {"rbp-tnt-description-parts.tool-area-viewer"},
     },
   },
   {
