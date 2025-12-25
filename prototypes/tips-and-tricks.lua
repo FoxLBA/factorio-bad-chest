@@ -114,7 +114,8 @@ data:extend{
         {"rbp-tnt-description-parts.deployer2-com41"}, "\n\n",
       },
       {"",
-        {"rbp-tnt-description-parts.action-copy-bp", {"rbp-tnt-description-parts.deployer2-com100-head"}}, "\n",
+        {"rbp-tnt-description-parts.deployer2-com100", rbp_signals({"superforce", "book-layer1"}), rbp_signals("superforce")}, "\n",
+        {"rbp-tnt-description-parts.deployer2-com101", rbp_signals({"superforce", "book-layer1"})}, "\n\n",
         {"rbp-tnt-description-parts.action-delete-bp", {"rbp-tnt-description-parts.deployer2-com120-head"}}, "\n\n",
         {"rbp-tnt-description-parts.action-debug"},
       }

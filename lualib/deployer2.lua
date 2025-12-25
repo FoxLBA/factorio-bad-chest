@@ -259,12 +259,7 @@ function BAD_Chest:signal_filtred_deconstruction()
   self:deconstruct_area(dp)
 end
 
-function BAD_Chest:copy_blueprint(from_exact)
-  local deployer = self.entity
-  local inventory = deployer.get_inventory(defines.inventory.chest)
-  if not inventory then return end
-  local rewrite = (self:get_signal(FLAG_SIGNALS.superforce) > 0) and RB_util.is_BP(inventory[1])
-  if (not rewrite and not inventory.is_empty()) then return end
+local function find_bp_through_wire(deployer)
   for _, signal in pairs(storage.blueprint_signals) do
     -- Check for a signal before doing an expensive search
     local r = deployer.get_signal(signal, defines.wire_connector_id.circuit_red) > 0
@@ -272,22 +267,58 @@ function BAD_Chest:copy_blueprint(from_exact)
     if r or g then
       -- Signal exists, now we have to search for the blueprint
       local stack = RB_util.find_stack_in_network(deployer, signal.name, r, g)
-      if stack then
-        if from_exact and stack.is_blueprint_book then
-          stack = self:pick_from_book(stack)
-          if not stack.valid_for_read then return end
-        end
-        ---@diagnostic disable-next-line: need-check-nil
-        inventory[1].set_stack(stack)
-        self:logging("copy_book", stack)
-        return
-      end
+      if stack then return stack end
     end
   end
 end
 
-function BAD_Chest:simple_copy(com)
-  self:copy_blueprint(false)
+---@param deployer LuaEntity
+---@param position MapPosition
+---@return LuaItemStack | nil
+local function find_bp_in_container(deployer, position)
+  local search = deployer.surface.find_entities_filtered{position = position, force = deployer.force}
+  for _, entity in pairs(search) do
+    local e_type = entity.type
+    if e_type == "container" or e_type == "logistic-container" then
+      local inventory = entity.get_inventory(defines.inventory.chest)
+      ---@diagnostic disable: need-check-nil
+      for i = 1, #inventory do
+        if RB_util.is_BP(inventory[i]) then
+          return inventory[i]
+        end
+      end
+      ---@diagnostic enable: need-check-nil
+    end
+  end
+end
+
+function BAD_Chest:copy_blueprint(com)
+  local deployer = self.entity
+  local d_inventory = deployer.get_inventory(defines.inventory.chest)
+  if not d_inventory then return end
+  local rewrite = (self:get_signal(FLAG_SIGNALS.superforce) > 0) and RB_util.is_BP(d_inventory[1])
+  if (not rewrite and not d_inventory.is_empty()) then return end
+  local stack
+
+  if     com == 100 then --wire copy
+    stack = find_bp_through_wire(deployer)
+  elseif com == 101 then --coordinates copy
+    local pos = self:get_target_position(true)
+    if not pos then return end
+    stack = find_bp_in_container(deployer, pos)
+    if stack and stack.owner_location and stack.owner_location.entity == deployer then
+      -- Сopies from itself. Temporary storage is needed.
+      storage.plans[3][1].set_stack(stack)
+      stack = storage.plans[3][1]
+    end
+  end
+
+  stack = self:pick_from_book(stack)
+
+  if RB_util.is_BP(stack) then
+    d_inventory[1].set_stack(stack)
+    self:logging("copy_book", stack)
+  end
 end
 
 function BAD_Chest:delete_item(com)
@@ -315,7 +346,7 @@ function BAD_Chest:remote_c_comb(com)
 end
 
 function BAD_Chest:find_c_comb()
-  local pos = self:get_target_position()
+  local pos = self:get_target_position(true)
   if not pos then return end
   local surface = self.entity.surface
   local force = self.entity.force
@@ -421,7 +452,7 @@ function BAD_Chest:separete_comm_inputs()
   return true
 end
 
-function BAD_Chest:get_target_position()
+function BAD_Chest:get_target_position(need_center)
   local pos = {
     x = self:get_signal(AREA_SIGNALS.x),
     y = self:get_signal(AREA_SIGNALS.y),
@@ -439,6 +470,10 @@ function BAD_Chest:get_target_position()
   or pos.y > 8000000
   or pos.y < -8000000 then
     return
+  end
+  if need_center then
+    pos.x = pos.x + 0.5
+    pos.y = pos.y + 0.5
   end
   self.last_target = {x = pos.x, y = pos.y}
   return pos
@@ -506,7 +541,7 @@ end
 ---@return table|nil
 function BAD_Chest:pick_from_book(bp)
   local last
-  if bp.is_blueprint_book then
+  if bp and bp.is_blueprint_book then
     local inventory
     for i=1, 6 do
       index = self:get_signal(BOOK_SIGNALS[i])
@@ -615,7 +650,8 @@ COMMANDS[32] = BAD_Chest.remote_c_comb -- toggle on/off
 COMMANDS[33] = BAD_Chest.remote_c_comb -- clear
 COMMANDS[40] = BAD_Chest.output_clear
 COMMANDS[41] = BAD_Chest.reset_IO
-COMMANDS[100] = BAD_Chest.simple_copy -- copy blueprint/book
+COMMANDS[100] = BAD_Chest.copy_blueprint -- wire copy
+COMMANDS[101] = BAD_Chest.copy_blueprint -- coordinates copy
 COMMANDS[120] = BAD_Chest.delete_item
 setmetatable(COMMANDS, {__index = function() return empty_func end}) -- do nothing by default
 

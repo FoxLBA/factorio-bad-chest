@@ -1,4 +1,12 @@
 ---------------------------------------------------------------------------------------------------
+Version: 1.4.13
+Date: ????
+  Features:
+    - Added new copy command (BAD Chest's command #101)
+    - The copy commands can now copy from inside the blueprint boocks.
+  Bugfixes:
+    - Fixed that the BAD chest couldn't find the constant combinator on coordinates (due to a previous fix with coordinates).
+---------------------------------------------------------------------------------------------------
 Version: 1.4.12
 Date: 2025-12-19
   Features:
