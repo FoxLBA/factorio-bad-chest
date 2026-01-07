@@ -356,6 +356,23 @@ function RB_util.get_signal_filter(signal)
   return {type=signal.type, name=signal.name, quality=signal.quality or "normal", comparator="="}
 end
 
+---@param entity LuaEntity
+---@param wire_bitmap int
+---@return table|nil
+function RB_util.get_signals_from_entity(entity, wire_bitmap)
+  local band = bit32.band
+  local signals
+  local main_input = band(wire_bitmap, 3)
+  if main_input == 1 then
+    signals = entity.get_signals(defines.wire_connector_id.circuit_red)
+  elseif main_input == 2 then
+    signals = entity.get_signals(defines.wire_connector_id.circuit_green)
+  elseif main_input == 3 then
+    signals = entity.get_signals(defines.wire_connector_id.circuit_red, defines.wire_connector_id.circuit_green)
+  end
+  return signals
+end
+
 function RB_util.check_verion(old, target)
   local a1, b1, c1 = string.match(old, "(%d+).(%d+).(%d+)")
   local a2, b2, c2 = string.match(target, "(%d+).(%d+).(%d+)")

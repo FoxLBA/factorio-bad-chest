@@ -313,6 +313,7 @@ function BAD_Chest:copy_blueprint(com)
     end
   end
 
+  ---@diagnostic disable-next-line: param-type-mismatch
   stack = self:pick_from_book(stack)
 
   if RB_util.is_BP(stack) then
@@ -384,6 +385,27 @@ function BAD_Chest:read_from_c_comb(c_comb)
     s.filters  = distant_s.filters
     s.multiplier  = distant_s.multiplier
     s.group  = distant_s.group
+  end
+end
+
+function BAD_Chest:read_from_distant_wire(com)
+  local pos = self:get_target_position(true)
+  if not pos then return end
+  local search = self.entity.surface.find_entities_filtered{position = pos, force = self.entity.force}
+  local wire_bitmap = self:get_signal(FLAG_SIGNALS.enviroment)
+  local signals
+  for _, e in pairs(search) do
+    signals = RB_util.get_signals_from_entity(e, wire_bitmap)
+    if signals then break end
+  end
+  local out_e = self:output_get_or_create_entity("output_alt")
+  if not out_e then return end
+  local s = RB_util.clear_constant_combinator(out_e.get_control_behavior())
+  if s and signals then
+    for i, signal in pairs(signals) do
+      ---@diagnostic disable-next-line: missing-fields
+      s.set_slot(i, {value =  RB_util.get_signal_filter(signal.signal), min = signal.count})
+    end
   end
 end
 
@@ -648,6 +670,7 @@ COMMANDS[30] = BAD_Chest.remote_c_comb -- read
 COMMANDS[31] = BAD_Chest.remote_c_comb -- write
 COMMANDS[32] = BAD_Chest.remote_c_comb -- toggle on/off
 COMMANDS[33] = BAD_Chest.remote_c_comb -- clear
+COMMANDS[34] = BAD_Chest.read_from_distant_wire
 COMMANDS[40] = BAD_Chest.output_clear
 COMMANDS[41] = BAD_Chest.reset_IO
 COMMANDS[100] = BAD_Chest.copy_blueprint -- wire copy

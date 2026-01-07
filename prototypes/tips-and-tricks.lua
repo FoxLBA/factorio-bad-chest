@@ -110,6 +110,7 @@ data:extend{
         {"rbp-tnt-description-parts.deployer2-com31", rbp_signals({"enviroment", "invert-filter"}), rbp_signals("invert-filter")}, "\n",
         {"rbp-tnt-description-parts.deployer2-com32", rbp_signals({"invert-filter"})}, "\n",
         {"rbp-tnt-description-parts.deployer2-com33"}, "\n",
+        {"rbp-tnt-description-parts.deployer2-com34", rbp_signals("enviroment")}, "\n",
         {"rbp-tnt-description-parts.deployer2-com40"}, "\n",
         {"rbp-tnt-description-parts.deployer2-com41"}, "\n\n",
       },
