@@ -30,8 +30,11 @@ local deployer2 = table.deepcopy(deployer)
 deployer2.name = "blueprint-deployer2"
 deployer2.minable.result = deployer2.name
 
+-- hide old deployer
 deployer.hidden = true
 deployer.hidden_in_factoriopedia = true
+deployer.minable.result = "blueprint-deployer2"
+deployer.placeable_by = {{item = "blueprint-deployer2", count=1}, {item = "blueprint-deployer", count=1}}
 
 local item_sounds = require("__base__.prototypes.item_sounds")
 data:extend{
