@@ -40,6 +40,7 @@ end
 local deployer = {
   "command", "cancel", "enviroment", "invert-filter", "rotate-bp",
   "superforce", "quality", "center", "absolute", "wait",
+  "library",
 }
 for i, name in pairs(deployer) do
   local hidden = nil

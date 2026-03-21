@@ -88,22 +88,44 @@ function BAD_Chest:tick(event)
 end
 
 function BAD_Chest:use_item(com)
-  local bp = self.entity.get_inventory(defines.inventory.chest)[1]
-  if not bp.valid_for_read then return end
-  -- Pick item from blueprint book
-  if bp.is_blueprint_book then
-    bp = self:pick_from_book(bp)
-    if not bp.valid_for_read then return end -- Got an empty slot
-    -- Pick active item from nested blueprint books if it is still a book.
-    while bp.is_blueprint_book do
-      if not bp.active_index then return end
-      bp = bp.get_inventory(defines.inventory.item_main)[bp.active_index]
-      if not bp.valid_for_read then return end
+  local bp
+  local i_lib = self:get_signal(FLAG_SIGNALS.lib)
+  if i_lib>0 then
+    -- use item in map's blueprint library (LuaRecord)
+    bp = game.blueprints[i_lib]
+    if not bp or not bp.valid then return end
+    if bp.type == "blueprint-book" then
+      bp = self:pick_from_book(bp)
+      if not bp then return end -- Got an empty slot
+      if bp.type == "blueprint-book" then
+        -- The active_index is associated with the player.
+        return
+      end
     end
-  end
-  if bp.is_blueprint then self:deploy_blueprint(bp, com)
-  elseif bp.is_deconstruction_item then self:deconstruct_area(bp)
-  elseif bp.is_upgrade_item then self:upgrade_area(bp)
+    if bp.type == "blueprint" then self:deploy_blueprint(bp, com)
+    elseif bp.type == "deconstruction-planner" then self:deconstruct_area(bp)
+    elseif bp.type == "upgrade-planner" then self:upgrade_area(bp)
+    end
+  else
+    -- use item in inventiry (LuaItemStack)
+    bp = self.entity.get_inventory(defines.inventory.chest)[1]
+    if not bp or not bp.valid_for_read then return end
+    -- Pick item from blueprint book
+    if bp.is_blueprint_book then
+      ---@diagnostic disable-next-line: param-type-mismatch
+      bp = self:pick_from_book(bp)
+      if not bp.valid_for_read then return end -- Got an empty slot
+      -- Pick active item from nested blueprint books if it is still a book.
+      while bp.is_blueprint_book do
+        if not bp.active_index then return end
+        bp = bp.get_inventory(defines.inventory.item_main)[bp.active_index]
+        if not bp.valid_for_read then return end
+      end
+    end
+    if bp.is_blueprint then self:deploy_blueprint(bp, com)
+    elseif bp.is_deconstruction_item then self:deconstruct_area(bp)
+    elseif bp.is_upgrade_item then self:upgrade_area(bp)
+    end
   end
 end
 
@@ -138,7 +160,11 @@ function BAD_Chest:deploy_blueprint(bp, com)
   local e = self.entity
   if com == 2 then
     local new_bp = storage.plans[3][1]
-    new_bp.set_stack(bp)
+    if bp.object_name == "LuaRecord" then
+      new_bp.import_stack(bp.export_record())
+    else
+      new_bp.set_stack(bp)
+    end
     local sate, result = pcall(Parametric, e.get_signals(self.input_main, self.input_alt), new_bp)
     if not sate then
       e.force.print(e.gps_tag .. " Blueprint parameterization error:\n" .. result)
@@ -162,6 +188,11 @@ end
 
 function BAD_Chest:deconstruct_area(bp)
   if type(bp) == "number" then bp = nil end
+  if bp and bp.object_name == "LuaRecord" then
+    local new_bp = storage.plans[1][1]
+    new_bp.import_stack(bp.export_record())
+    bp = new_bp
+  end
   local area = self:get_area()
   local surface = self.entity.surface
   local params = {
@@ -181,6 +212,11 @@ function BAD_Chest:deconstruct_area(bp)
 end
 
 function BAD_Chest:upgrade_area(bp)
+  if bp and bp.object_name == "LuaRecord" then
+    local new_bp = storage.plans[2][1]
+    new_bp.import_stack(bp.export_record())
+    bp = new_bp
+  end
   local area = self:get_area()
   local surface = self.entity.surface
   local params = {
@@ -311,14 +347,23 @@ function BAD_Chest:copy_blueprint(com)
       storage.plans[3][1].set_stack(stack)
       stack = storage.plans[3][1]
     end
+  elseif com == 102 then --copy from library
+    local index = self:get_signal(FLAG_SIGNALS.lib)
+    stack = game.blueprints[index]
   end
 
   ---@diagnostic disable-next-line: param-type-mismatch
   stack = self:pick_from_book(stack)
 
-  if RB_util.is_BP(stack) then
-    d_inventory[1].set_stack(stack)
-    self:logging("copy_book", stack)
+  if stack then
+    if stack.object_name == "LuaRecord" then
+      d_inventory[1].import_stack(stack.export_record())
+      self:logging("copy_book", stack)
+    elseif RB_util.is_BP(stack) then
+      ---@diagnostic disable-next-line: param-type-mismatch
+      d_inventory[1].set_stack(stack)
+      self:logging("copy_book", stack)
+    end
   end
 end
 
@@ -558,22 +603,38 @@ function BAD_Chest:output_get_or_create_entity(name)
   return b
 end
 
----@param bp LuaItemStack
----@return LuaItemStack
+---@param bp LuaItemStack|LuaRecord
+---@return LuaItemStack|LuaRecord
 ---@return table|nil
 function BAD_Chest:pick_from_book(bp)
   local last
-  if bp and bp.is_blueprint_book then
-    local inventory
-    for i=1, 6 do
-      index = self:get_signal(BOOK_SIGNALS[i])
-      if index < 1 then break end -- invalid index
-      inventory = bp.get_inventory(defines.inventory.item_main)
-      last = {inventory, index}
-      if (#inventory < 1) or (index > #inventory) then break end -- empty book or index out of bound
-      ---@diagnostic disable-next-line: need-check-nil
-      bp = inventory[index]
-      if not bp.valid_for_read or not bp.is_blueprint_book then break end -- Got an empty slot or not a book
+  if bp then
+    if bp.object_name == "LuaRecord" then
+      if bp.type == "blueprint-book" then
+        local content
+        for i=1, 6 do
+          local index = self:get_signal(BOOK_SIGNALS[i])
+          if index < 1 or index > bp.contents_size then break end -- invalid index
+          content = bp.contents[index]
+          last = {bp, index}
+          bp = content
+          if not bp or bp.type ~= "blueprint_book" then break end -- Got an empty slot or not a book
+        end
+      end
+    else
+      if bp.is_blueprint_book then
+        local inventory
+        for i=1, 6 do
+          local index = self:get_signal(BOOK_SIGNALS[i])
+          if index < 1 then break end -- invalid index
+          inventory = bp.get_inventory(defines.inventory.item_main)
+          last = {inventory, index}
+          if (#inventory < 1) or (index > #inventory) then break end -- empty book or index out of bound
+          ---@diagnostic disable-next-line: need-check-nil
+          bp = inventory[index]
+          if not bp.valid_for_read or not bp.is_blueprint_book then break end -- Got an empty slot or not a book
+        end
+      end
     end
   end
   return bp, last
@@ -675,6 +736,7 @@ COMMANDS[40] = BAD_Chest.output_clear
 COMMANDS[41] = BAD_Chest.reset_IO
 COMMANDS[100] = BAD_Chest.copy_blueprint -- wire copy
 COMMANDS[101] = BAD_Chest.copy_blueprint -- coordinates copy
+COMMANDS[102] = BAD_Chest.copy_blueprint -- copy from library
 COMMANDS[120] = BAD_Chest.delete_item
 setmetatable(COMMANDS, {__index = function() return empty_func end}) -- do nothing by default
 
