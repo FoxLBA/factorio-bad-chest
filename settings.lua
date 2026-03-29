@@ -34,4 +34,17 @@ data:extend{
     default_value = "relative",
     allowed_values = {"relative", "absolute"},
   },
+  {
+    type = "bool-setting",
+    name = "recursive-blueprints-limit-library",
+    setting_type = "runtime-global",
+    default_value = false,
+  },
+  {
+    type = "int-setting",
+    name = "recursive-blueprints-alerts-interval",
+    setting_type = "runtime-global",
+    default_value = 30,
+    minimum_value = 0,
+  },
 }

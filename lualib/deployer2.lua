@@ -56,6 +56,17 @@ function BAD_Chest.on_tick(event)
   end
 end
 
+local function alert_msg(force, msg_group, msg)
+    if not storage.custom_alerts then storage.custom_alerts = {} end
+    local alerts = storage.custom_alerts
+    if not alerts[force.name] then alerts[force.name] = {} end
+    local last_time = alerts[force.name][msg_group]
+    if not last_time or (last_time and (last_time + settings.global["recursive-blueprints-alerts-interval"].value) < game.tick)  then
+        force.print(msg)
+        alerts[force.name][msg_group] = game.tick
+    end
+end
+
 function BAD_Chest:destroy()
   self:reset_IO()
   storage.deployers2[self.id] = nil
@@ -161,13 +172,18 @@ function BAD_Chest:deploy_blueprint(bp, com)
   if com == 2 then
     local new_bp = storage.plans[3][1]
     if bp.object_name == "LuaRecord" then
+      if settings.global["recursive-blueprints-limit-library"] then
+        -- The setting prohibits copying a blueprints from the library.
+        alert_msg(e.force, "library-limit", {"recursive-blueprints.library-limit", e.gps_tag})
+        return
+      end
       new_bp.import_stack(bp.export_record())
     else
       new_bp.set_stack(bp)
     end
     local sate, result = pcall(Parametric, e.get_signals(self.input_main, self.input_alt), new_bp)
     if not sate then
-      e.force.print(e.gps_tag .. " Blueprint parameterization error:\n" .. result)
+      alert_msg(e.force, "parameterization-error", (e.gps_tag .. " Blueprint parameterization error:\n" .. result))
     else
       bp = new_bp
     end
@@ -348,6 +364,11 @@ function BAD_Chest:copy_blueprint(com)
       stack = storage.plans[3][1]
     end
   elseif com == 102 then --copy from library
+    if settings.global["recursive-blueprints-limit-library"] then
+      -- The setting prohibits copying a blueprints from the library.
+      alert_msg(deployer.force, "library-limit", {"recursive-blueprints.library-limit", deployer.gps_tag})
+      return
+    end
     local index = self:get_signal(FLAG_SIGNALS.lib)
     stack = game.blueprints[index]
   end
