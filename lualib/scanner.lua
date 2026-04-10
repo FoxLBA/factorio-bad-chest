@@ -42,6 +42,7 @@ local OLD_SCANNER_SETTINGS = {
     items_on_ground = {is_shown = false, signal = {name="signal-I", type="virtual"}, is_negative = false},
     trees_and_rocks = {is_shown = false, signal = {name="signal-T", type="virtual"}, is_negative = false},
     to_be_deconstructed = {is_shown = false, signal = {name="signal-D", type="virtual"}, is_negative = false},
+    plants      = {is_shown = false, signal = {name="signal-P", type="virtual"}, is_negative = false},
   }
 }
 
@@ -72,6 +73,7 @@ local NEW_SCANNER_SETTINGS = {
     items_on_ground = {signal = virtual_signal("recursive-blueprints-counter-items_on_ground")},
     trees_and_rocks = {signal = virtual_signal("recursive-blueprints-counter-trees_and_rocks")},
     to_be_deconstructed = {signal = virtual_signal("recursive-blueprints-counter-to_be_deconstructed")},
+    plants      = {signal = virtual_signal("recursive-blueprints-counter-plants")},
   }
 }
 
@@ -93,6 +95,8 @@ AreaScanner.FILTER_MASK_ORDER = {
   {group = "counters", name = "trees_and_rocks"},
   {group = "counters", name = "to_be_deconstructed"},
   {group = "filters",  name = "to_be_deconstructed"},
+  {group = "counters", name = "plants"},
+  {group = "filters",  name = "plants"},
 }
 
 function AreaScanner.on_tick()
@@ -413,6 +417,7 @@ function AreaScanner.scan_resources(scanner)
   local result2 = {item = ql(), fluid = ql(), virtual = ql()} -- buildings, ghosts, items on ground
   if band(filter, 2) > 0 then count_mineable(prototypes.entity, scans.resources, result1, true) end --show_resources
   scans.counters.trees_and_rocks = count_mineable(prototypes.entity, scans.environment, result1, (band(filter, 4) > 0)) --show_environment
+  count_mineable(prototypes.entity, scans.plants, result1, true) -- plants
   if band(filter, 32) > 0 then result2.item = scans.items_on_ground end --show_items_on_ground
   scans.counters.buildings = count_placeable(prototypes.entity, scans.buildings, result2, (band(filter, 8) > 0)) --show_buildings
   scans.counters.ghosts = count_placeable(prototypes.entity, scans.ghosts, result2, (band(filter, 16) > 0))
@@ -526,6 +531,10 @@ local function get_forces_exept(force)
   return forces
 end
 
+local function get_counters_set()
+  return {resources = 0, cliffs = 0, items_on_ground = 0, to_be_deconstructed = 0, targets = 0, plants = 0}
+end
+
 -- Count the entitys in charted area
 -- Output:
 --[[
@@ -561,7 +570,8 @@ function AreaScanner.scan_area(surface, areas, scanner_force, filter)
   local ghosts = ql()
   local items_on_ground = ql()
   local to_be_deconstructed = ql()
-  local counters = {resources = 0, cliffs = 0, items_on_ground = 0, to_be_deconstructed = 0, targets = 0}
+  local plants = {}
+  local counters = get_counters_set()
 
   if band(filter, 1026) > 0 then -- Ore
     local blacklist = {}
@@ -607,6 +617,24 @@ function AreaScanner.scan_area(surface, areas, scanner_force, filter)
       end
     end
   end -- Trees, fish, rocks
+
+  if band(filter, 393216) > 0 then -- plants
+    local blacklist = {}
+    local count = 0
+    for _, area in pairs(areas) do
+      for _, entity in pairs(surface.find_entities_filtered{area = area, type = "plant"}) do
+        local e_pos  = entity.position
+        local e_name = entity.name
+        local hash = e_name .. "_" .. e_pos.x .. "_" .. e_pos.y
+        if not blacklist[hash] then
+          plants[e_name] = (plants[e_name] or 0) + 1
+          count = count + 1
+          blacklist[hash] = true
+        end
+      end
+    end
+    counters.plants = count
+  end -- plants
 
   if band(filter, 2056) > 0 then -- Buildings
     local blacklist = {}
@@ -713,7 +741,7 @@ function AreaScanner.scan_area(surface, areas, scanner_force, filter)
     end
   end -- Enemy base
 
-  return {resources = resources, environment = environment, buildings = buildings, ghosts = ghosts, items_on_ground = items_on_ground, counters = counters, to_be_deconstructed = to_be_deconstructed}
+  return {resources = resources, environment = environment, buildings = buildings, ghosts = ghosts, items_on_ground = items_on_ground, counters = counters, to_be_deconstructed = to_be_deconstructed, plants = plants}
 end
 
 -- Almost a complete copy of "AreaScanner.scan_area()"
@@ -728,7 +756,8 @@ function AreaScanner.scan_area_no_hash(surface, area, scanner_force, filter)
   local ghosts = ql()
   local items_on_ground = ql()
   local to_be_deconstructed = ql()
-  local counters = {resources = 0, cliffs = 0, items_on_ground = 0, to_be_deconstructed = 0, targets = 0}
+  local plants = {}
+  local counters = get_counters_set()
 
   if band(filter, 2) > 0 then -- Ore
     for _, entity in pairs(surface.find_entities_filtered{area = area, type = "resource"}) do
@@ -753,6 +782,17 @@ function AreaScanner.scan_area_no_hash(surface, area, scanner_force, filter)
       environment[e_name] = (environment[e_name] or 0) + 1
     end
   end -- Trees, fish, rocks
+
+  if band(filter, 262144) > 0 then --plants
+    for _, entity in pairs(surface.find_entities_filtered{area = area, type = "plant"}) do
+      local e_name = entity.name
+      plants[e_name] = (plants[e_name] or 0) + 1
+    end
+  end --plants
+
+  if band(filter, 131072) > 0 then --plants count
+    counters.plants = surface.count_entities_filtered{area = area, type = "plant"}
+  end --plants count
 
   if band(filter, 2056) > 0 then -- Buildings
     for _, entity in pairs(surface.find_entities_filtered{area = area, force = get_forces_exept(scanner_force), name = "entity-ghost", invert=true}) do
@@ -804,7 +844,7 @@ function AreaScanner.scan_area_no_hash(surface, area, scanner_force, filter)
     end
   end -- Enemy base
 
-  return {resources = resources, environment = environment, buildings = buildings, ghosts = ghosts, items_on_ground = items_on_ground, counters = counters, to_be_deconstructed = to_be_deconstructed}
+  return {resources = resources, environment = environment, buildings = buildings, ghosts = ghosts, items_on_ground = items_on_ground, counters = counters, to_be_deconstructed = to_be_deconstructed, plants = plants}
 end
 
 -- Out of bounds check.

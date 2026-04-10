@@ -686,9 +686,17 @@ function AreaScannerGUI.update_scanner_gui(gui)
 
   if not gui.children[2].visible then return end
   local settings_lines = gui.children[2].children[2].children[2]
-  local counters = settings.counters or AreaScanner.DEFAULT_SCANNER_SETTINGS.counters
+  local counters = settings.counters
+  local check_nil = true
+  if not counters then
+    counters = AreaScanner.DEFAULT_SCANNER_SETTINGS.counters
+    check_nil = false
+  end
   for i = 1, #settings_lines.children do
     local sprite_button = settings_lines.children[i].children[2]
+    if check_nil and not counters[sprite_button.tags.name] then
+      counters[sprite_button.tags.name] = {is_shown = false, signal = {name="signal-dot", type="virtual"}, is_negative = false}
+    end
     GUI_util.set_slot_button(sprite_button, counters[sprite_button.tags.name].signal)
     settings_lines.children[i].children[1].state = counters[sprite_button.tags.name].is_negative or false
   end

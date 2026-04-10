@@ -1,10 +1,11 @@
 ---------------------------------------------------------------------------------------------------
 Version: 1.4.14
-Date: ????
+Date: 2026-04-10
   Features:
     - Added "Blueprints library index" signal.
     - Added a new copy command (BAD Chest's command #102).
     - Added a new mod option to limit usage of blueprints library by BAD chest.
+    - [space-age] The scanner can now see plants.
   Changes:
     - Old deployer now can be build by construction robots.
 ---------------------------------------------------------------------------------------------------

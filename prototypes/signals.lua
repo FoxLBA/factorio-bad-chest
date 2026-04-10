@@ -9,6 +9,7 @@ local rbp_signals = {
 local counters = {
   "uncharted", "cliffs", "targets", "water", "resources",
   "buildings", "ghosts", "items_on_ground", "trees_and_rocks", "to_be_deconstructed",
+  "plants",
 }
 
 for i, name in pairs(counters) do
