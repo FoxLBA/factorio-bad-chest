@@ -172,7 +172,7 @@ function BAD_Chest:deploy_blueprint(bp, com)
   if com == 2 then
     local new_bp = storage.plans[3][1]
     if bp.object_name == "LuaRecord" then
-      if settings.global["recursive-blueprints-limit-library"] then
+      if settings.global["recursive-blueprints-limit-library"].value then
         -- The setting prohibits copying a blueprints from the library.
         alert_msg(e.force, "library-limit", {"recursive-blueprints.library-limit", e.gps_tag})
         return
@@ -364,7 +364,7 @@ function BAD_Chest:copy_blueprint(com)
       stack = storage.plans[3][1]
     end
   elseif com == 102 then --copy from library
-    if settings.global["recursive-blueprints-limit-library"] then
+    if settings.global["recursive-blueprints-limit-library"].value then
       -- The setting prohibits copying a blueprints from the library.
       alert_msg(deployer.force, "library-limit", {"recursive-blueprints.library-limit", deployer.gps_tag})
       return

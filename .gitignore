@@ -1,1 +1,2 @@
 *.zip
+lualib/debug-locale.lua
