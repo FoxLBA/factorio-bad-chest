@@ -639,7 +639,7 @@ function BAD_Chest:pick_from_book(bp)
           content = bp.contents[index]
           last = {bp, index}
           bp = content
-          if not bp or bp.type ~= "blueprint_book" then break end -- Got an empty slot or not a book
+          if not bp or bp.type ~= "blueprint-book" then break end -- Got an empty slot or not a book
         end
       end
     else
