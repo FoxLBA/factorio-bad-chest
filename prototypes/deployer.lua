@@ -1,5 +1,6 @@
 local deployer = table.deepcopy(data.raw["container"]["steel-chest"])
 deployer.name = "blueprint-deployer"
+deployer.icons = nil -- icons overwrites icon
 deployer.icon = "__rec-blue-plus__/graphics/blueprint-deployer-icon.png"
 deployer.minable.result = "blueprint-deployer"
 deployer.inventory_size = 1
@@ -26,9 +27,19 @@ deployer.picture.layers = {
   -- Shadow
   table.deepcopy(data.raw["container"]["iron-chest"].picture.layers[2])
 }
+
+local deployer2_icons = {
+  {icon = "__rec-blue-plus__/graphics/blueprint-deployer-icon.png"},
+  {
+    icon = "__rec-blue-plus__/graphics/signals/deployer_command.png",
+    scale = 0.25,
+    shift = {-8, 8},
+  },
+}
 local deployer2 = table.deepcopy(deployer)
 deployer2.name = "blueprint-deployer2"
 deployer2.minable.result = deployer2.name
+deployer2.icons = deployer2_icons
 
 -- hide old deployer
 deployer.hidden = true
@@ -38,7 +49,7 @@ deployer.placeable_by = {{item = "blueprint-deployer2", count=1}, {item = "bluep
 
 local item_sounds = require("__base__.prototypes.item_sounds")
 data:extend{
-  deployer,
+  deployer, -- entity
   {
     type = "item",
     name = "blueprint-deployer",
@@ -67,18 +78,11 @@ data:extend{
     hidden = true,
     hidden_in_factoriopedia = true,
   },
-  deployer2,
+  deployer2, -- entity
   {
     type = "item",
     name = "blueprint-deployer2",
-    icons = {
-      {icon = "__rec-blue-plus__/graphics/blueprint-deployer-icon.png"},
-      {
-        icon = "__rec-blue-plus__/graphics/signals/deployer_command.png",
-        scale = 0.25,
-        shift = {-8, 8},
-      },
-    },
+    icons = deployer2_icons,
     icon_size = 64,
     inventory_move_sound = item_sounds.metal_chest_inventory_move,
     pick_sound = item_sounds.metal_chest_inventory_pickup,

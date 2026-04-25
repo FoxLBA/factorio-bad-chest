@@ -3,6 +3,8 @@ Version: 1.4.17
 Date: ????
   Locale:
     - Fixed a typo in the t&t for command #32.
+  Graphics:
+    - Fixed the BAD chest icon (for entity).
 ---------------------------------------------------------------------------------------------------
 Version: 1.4.16
 Date: 2026-04-12
