@@ -680,8 +680,14 @@ local function make_gps_string(position, surface)
 end
 
 local function get_bp_name(bp)
-  if not bp or not bp.valid or not bp.label then return "unnamed" end
-  return bp.label
+  if bp and bp.valid then
+    if bp.object_name == "LuaRecord" then
+      return "from-library"
+    else
+      return bp.label or "unnamed"
+    end
+  end
+  return "unknown"
 end
 
 local function make_area_string(size)

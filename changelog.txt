@@ -1,10 +1,11 @@
 ---------------------------------------------------------------------------------------------------
 Version: 1.4.17
-Date: ????
-  Locale:
-    - Fixed a typo in the t&t for command #32.
-  Graphics:
+Date: 2026-04-27
+  Bugfixes:
+    - Fixed a mod crash when logging blueprints from the library.
     - Fixed the BAD chest icon (for entity).
+  Locale:
+    - Fixed a typo in the t&t for en locale (command #32).
 ---------------------------------------------------------------------------------------------------
 Version: 1.4.16
 Date: 2026-04-12
@@ -90,7 +91,7 @@ Date: 2025-02-09
   Features:
     - Added blueprint parameterization (BAD Chest's command #2)
   Bugfixes:
-    - Fixed crahs with new deployer logging.
+    - Fixed a mod crash with new deployer logging.
 ---------------------------------------------------------------------------------------------------
 Version: 1.4.5
 Date: 2025-01-08
