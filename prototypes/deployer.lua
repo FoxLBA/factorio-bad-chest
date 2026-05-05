@@ -40,6 +40,7 @@ local deployer2 = table.deepcopy(deployer)
 deployer2.name = "blueprint-deployer2"
 deployer2.minable.result = deployer2.name
 deployer2.icons = deployer2_icons
+deployer2.localised_description = {"item-description.blueprint-deployer2"}
 
 -- hide old deployer
 deployer.hidden = true

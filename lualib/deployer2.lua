@@ -491,10 +491,12 @@ function BAD_Chest:write_to_c_comb(behavior)
   end
   local section = behavior.sections[section_i]
   local filter = {}
-  ---@diagnostic disable-next-line: param-type-mismatch
-  for _, signal in pairs(self.entity.get_signals(self.input_alt)) do
-    local s = signal.signal
-    table.insert(filter, {value={type=s.type, name=s.name, quality=s.quality or "normal", comparator="="}, min=signal.count})
+  local signals = self.entity.get_signals(self.input_alt)
+  if signals then
+    for _, signal in pairs(signals) do
+      local s = signal.signal
+      table.insert(filter, {value={type=s.type, name=s.name, quality=s.quality or "normal", comparator="="}, min=signal.count})
+    end
   end
   section.filters = filter
   section.active = (not is_exact_section) or (self:get_signal(FLAG_SIGNALS.invert) < 1)

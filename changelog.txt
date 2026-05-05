@@ -1,4 +1,11 @@
 ---------------------------------------------------------------------------------------------------
+Version: 1.4.18
+Date: 2026-05-05
+  Bugfixes:
+    - Fixed a mod crash when using BAD Chest's command #31 without signals to write.
+  Locale:
+    - Renamed "BAD chest" -> "B.A.D. Chest". Added a description for its entity.
+---------------------------------------------------------------------------------------------------
 Version: 1.4.17
 Date: 2026-04-27
   Bugfixes:
