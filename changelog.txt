@@ -1,4 +1,11 @@
 ---------------------------------------------------------------------------------------------------
+Version: 1.5.0
+Date: ????
+  Major Features:
+    - Initial port to Factorio 2.1
+  Changes:
+    - B.A.D. Chest logging can now read the labels of blueprint from the library.
+---------------------------------------------------------------------------------------------------
 Version: 1.4.18
 Date: 2026-05-05
   Bugfixes:

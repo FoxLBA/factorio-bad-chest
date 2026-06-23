@@ -8,9 +8,10 @@ if data.raw["constant-combinator"] then
   c_comb_select =
     {
       border_color = {255, 24, 24},
-      mode = {"blueprint"},
+      mode = {"buildable-type", "same-force"},
       entity_filters = {"constant-combinator"},
       cursor_box_type = "not-allowed",
+      ignore_cannot_select_tiles = true,
     }
 end
 
@@ -68,14 +69,16 @@ data:extend{
     select =
     {
       border_color = {71, 255, 73},
-      mode = {"blueprint"}, --"nothing"
+      mode = {"buildable-type", "blueprint", "same-force"},
       cursor_box_type = "spidertron-remote-to-be-selected",
+      ignore_cannot_select_tiles = true,
     },
     alt_select =
     {
       border_color = {239, 153, 34},
-      mode = {"blueprint"},
+      mode = {"buildable-type", "blueprint", "same-force"},
       cursor_box_type = "entity",
+      ignore_cannot_select_tiles = true,
     },
     --super_forced_select
     reverse_select = c_comb_select
@@ -98,22 +101,24 @@ data:extend{
     select =
     {
       border_color = {128, 128, 255},
-      mode = {"entity-with-health"},
+      mode = {"entity-with-health", "same-force"},
       cursor_box_type = "entity",
       entity_filters = {
         "blueprint-deployer2",
         "recursive-blueprints-scanner",
       },
+      ignore_cannot_select_tiles = true,
     },
     alt_select =
     {
       border_color = {128, 128, 255},
-      mode = {"entity-with-health"},
+      mode = {"entity-with-health", "same-force"},
       cursor_box_type = "entity",
       entity_filters = {
         "blueprint-deployer2",
         "recursive-blueprints-scanner",
       },
+      ignore_cannot_select_tiles = true,
     },
   },
   input2,

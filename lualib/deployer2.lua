@@ -683,11 +683,7 @@ end
 
 local function get_bp_name(bp)
   if bp and bp.valid then
-    if bp.object_name == "LuaRecord" then
-      return "from-library"
-    else
-      return bp.label or "unnamed"
-    end
+    return bp.label or "unnamed"
   end
   return "unknown"
 end

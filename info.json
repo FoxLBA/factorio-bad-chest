@@ -1,11 +1,11 @@
 {
   "name":"rec-blue-plus",
   "author":"Doc, justarandomgeek, DaveMcW, FoxLBA",
-  "version": "1.4.18",
+  "version": "1.5.0",
   "title":"Recursive Blueprints+",
   "homepage":"",
   "description":"Automate blueprints to build a self-expanding factory.\nFork of Recursive Blueprints with new features.",
-  "dependencies": ["base>=2.0.12", "!recursive-blueprints"],
-  "factorio_version": "2.0",
+  "dependencies": ["base>=2.1.7", "!recursive-blueprints"],
+  "factorio_version": "2.1",
   "package": {"ignore": ["README.md", "docs/*", "graphics/*.psd", "graphics/*.xcf", "graphics/signals/*.xcf"]}
 }
