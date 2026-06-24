@@ -8,10 +8,6 @@ local AREA_SIGNALS = RBP_defines.AREA_SIGNALS
 local FLAG_SIGNALS = RBP_defines.FLAG_SIGNALS
 local BOOK_SIGNALS = RBP_defines.BOOK_SIGNALS
 local UNION_SIGNALS_LIST = RBP_defines.UNION_SIGNALS_LIST
-local OUTPUT_VALID_NAMES = {
-  output_alt = true, -- hidden c-comb that emits output signals.
-  output_compensate = true, -- hidden c-comb that emits -1 of item stored in BAD_Chest.
-}
 
 local function empty_func() end
 
@@ -22,7 +18,6 @@ local function empty_func() end
 ---@field input_main defines.wire_connector_id
 ---@field input_alt defines.wire_connector_id
 ---@field output_alt nil|LuaEntity
----@field output_compensate nil|LuaEntity
 ---@field wait nil|table
 local BAD_Chest = {}
 BAD_Chest.__index = BAD_Chest
@@ -423,7 +418,7 @@ end
 
 function BAD_Chest:read_from_c_comb(c_comb)
   if not self:separete_comm_inputs() then return end
-  local out_e = self:output_get_or_create_entity("output_alt")
+  local out_e = self:output_get_or_create_entity()
   if not out_e then return end
   local section_i = self:get_signal(FLAG_SIGNALS.enviroment)
   if section_i < 1 then
@@ -455,6 +450,7 @@ function BAD_Chest:read_from_c_comb(c_comb)
 end
 
 function BAD_Chest:read_from_distant_wire(com)
+  if not self:separete_comm_inputs() then return end
   local pos = self:get_target_position(true)
   if not pos then return end
   local search = self.entity.surface.find_entities_filtered{position = pos, force = self.entity.force}
@@ -464,7 +460,7 @@ function BAD_Chest:read_from_distant_wire(com)
     signals = RB_util.get_signals_from_entity(e, wire_bitmap)
     if signals then break end
   end
-  local out_e = self:output_get_or_create_entity("output_alt")
+  local out_e = self:output_get_or_create_entity()
   if not out_e then return end
   local s = RB_util.clear_constant_combinator(out_e.get_control_behavior())
   if s and signals then
@@ -502,6 +498,7 @@ function BAD_Chest:write_to_c_comb(behavior)
   section.active = (not is_exact_section) or (self:get_signal(FLAG_SIGNALS.invert) < 1)
 end
 
+--Get signal from main or combined input
 function BAD_Chest:get_signal(signal)
   if self.is_input_combined then
     return self.entity.get_signal(signal, defines.wire_connector_id.circuit_red, defines.wire_connector_id.circuit_green)
@@ -509,8 +506,14 @@ function BAD_Chest:get_signal(signal)
   return self.entity.get_signal(signal, self.input_main)
 end
 
+--TODO: Get signals from alt input if enabled
+--function BAD_Chest:get_alt_signals()
+--PROBLEM: If you turn off the chest's output signal and read the signals from the same wire within one tick, the contents of the chest will be added to the signals.
+--For example, when writing to the constant combinator (com #31).
+
 function BAD_Chest:separete_comm_inputs()
   local main_e = self.entity
+  local container_output = {red = true, green = true}
   if self.is_input_combined then
     local wr, wg = defines.wire_connector_id.circuit_red, defines.wire_connector_id.circuit_green
     local r = main_e.get_signal(COM_SIGNAL, wr)
@@ -520,23 +523,19 @@ function BAD_Chest:separete_comm_inputs()
       if g==0 then
         self.input_main = wr
         self.input_alt  = wg
+        container_output.green = false
       else
         self.input_main = wg
         self.input_alt  = wr
+        container_output.red = false
       end
     else
       return false
     end
-  end
-  --Read inventory and emit negative signal to compensate it in alt output wire.
-  local c = self:output_get_or_create_entity("output_compensate")
-  if c and c.valid then
-    local section = RB_util.clear_constant_combinator(c.get_control_behavior())
-    local inv = main_e.get_inventory(defines.inventory.chest)
-    if inv and inv.valid and (not inv.is_empty()) and section and section.valid then
-      local con = inv.get_contents()[1]
-      ---@diagnostic disable-next-line: missing-fields
-      section.set_slot(1, {value={name=con.name, quality=con.quality, comparator="="}, min=(-con.count)})
+    --Disable inventory output for "alternative" wire.
+    local cb = self.entity.get_control_behavior()
+    if cb and cb.output_networks then
+      cb.output_networks = container_output
     end
   end
   return true
@@ -587,12 +586,14 @@ end
 
 function BAD_Chest:reset_IO()
   self.is_input_combined = true
-  for name, _ in pairs(OUTPUT_VALID_NAMES) do
-    local e = self[name]
-    if e and e.valid then
-      e.destroy()
-      self[name] = nil
-    end
+  local e = self.output_alt
+  if e and e.valid then
+    e.destroy()
+    self.output_alt = nil
+  end
+  local cb = self.entity.get_control_behavior()
+  if cb and cb.output_networks then
+    cb.output_networks = {red = true, green = true}
   end
 end
 
@@ -604,12 +605,10 @@ function BAD_Chest:output_clear()
   end
 end
 
----@param name string
 ---@return LuaEntity|nil
-function BAD_Chest:output_get_or_create_entity(name)
-  if not OUTPUT_VALID_NAMES[name] then return end
+function BAD_Chest:output_get_or_create_entity()
   local main_e = self.entity
-  local b = self[name]
+  local b = self.output_alt
   if not b or not b.valid then
     b = main_e.surface.create_entity{
       name = "recursive-blueprints-hidden-io",
@@ -618,10 +617,15 @@ function BAD_Chest:output_get_or_create_entity(name)
       create_build_effect_smoke = false,
     }
     if not b then return end
-    self[name] = b
     local def = self.input_alt
     local hidden_con = b.get_wire_connector(def, true)
-    hidden_con.connect_to(main_e.get_wire_connector(def, true))
+    local main_con = main_e.get_wire_connector(def, true)
+    if not hidden_con or not main_con then
+      b.destroy()
+      return
+    end
+    hidden_con.connect_to(main_con)
+    self.output_alt = b
   end
   return b
 end
@@ -664,10 +668,8 @@ function BAD_Chest:pick_from_book(bp)
 end
 
 function BAD_Chest:dolly_moved()
-  for name, _ in pairs(OUTPUT_VALID_NAMES) do
-    local e = self[name]
-    if e and e.valid then e.teleport(self.entity.position) end
-  end
+  local e = self.output_alt
+  if e and e.valid then e.teleport(self.entity.position) end
 end
 
 local LOGGING_SIGNAL = {name="signal-L", type="virtual"}

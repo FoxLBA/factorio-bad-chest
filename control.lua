@@ -7,6 +7,7 @@ GUI_util = require "lualib.gui-util"
 AreaScannerGUI = require "lualib.scanner-gui"
 AreaScanner = require "lualib.scanner"
 local OC_Tool = require "lualib.tool"
+local migrate_funcs = require "lualib.migration"
 
 local function init_caches()
   RB_util.cache_in_storage()
@@ -44,54 +45,7 @@ end
 
 local function on_mods_changed(event)
   init_caches()
-  if not storage.deployers2 then storage.deployers2 = {} end
-
-  --Migrate deployers and scanners to new mod name
-  if (event and event.mod_changes) and
-  (event.mod_changes["recursive-blueprints"]
-  and event.mod_changes["recursive-blueprints"].old_version) then
-    for _, surface in pairs(game.surfaces) do
-      for _, entity in pairs(surface.find_entities_filtered({name = {"blueprint-deployer", "recursive-blueprints-scanner"}})) do
-        if entity.name == "blueprint-deployer" then
-          storage.deployers[entity.unit_number] = entity
-        elseif entity.name == "recursive-blueprints-scanner" then
-          AreaScanner.on_built(entity, {})
-        end
-      end
-    end
-  end
-
-  --Migrate to new scanner data format (changed in 1.3.11).
-  if (event and event.mod_changes)
-  and (event.mod_changes["rec-blue-plus"]
-  and event.mod_changes["rec-blue-plus"].old_version) then
-    if RB_util.check_verion(event.mod_changes["rec-blue-plus"].old_version, "1.3.11") then
-      for _, scanner in pairs(storage.scanners or {}) do
-        AreaScanner.on_built(scanner.entity, {tags = scanner})
-      end
-    end
-  end
-
-  --Migrate to new scanner io (changed in 1.4.1).
-  if (event and event.mod_changes)
-  and (event.mod_changes["rec-blue-plus"]
-  and event.mod_changes["rec-blue-plus"].old_version) then
-    if RB_util.check_verion(event.mod_changes["rec-blue-plus"].old_version, "1.4.1") then
-      for i, scanner in pairs(storage.scanners or {}) do
-        local entity = scanner.entity
-        if entity.valid then
-          local old_behavior = entity.get_control_behavior()
-          local b = AreaScanner.get_or_create_output_behavior(scanner)
-          if (old_behavior.sections_count > 0) and (old_behavior.sections[1].filters_count > 0) then
-            b.sections[1].filters = old_behavior.sections[1].filters
-          end
-          RB_util.clear_constant_combinator(old_behavior)
-        else
-          AreaScanner.on_destroyed(i)
-        end
-      end
-    end
-  end
+  migrate_funcs(event)
 
   -- Delete signals from uninstalled mods
   for _, scanner in pairs(storage.scanners) do

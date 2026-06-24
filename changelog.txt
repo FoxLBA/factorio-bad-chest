@@ -1,10 +1,11 @@
 ---------------------------------------------------------------------------------------------------
 Version: 1.5.0
-Date: ????
+Date: 2026-06-24
   Major Features:
-    - Initial port to Factorio 2.1
+    - Updated for Factorio 2.1
   Changes:
-    - B.A.D. Chest logging can now read the labels of blueprint from the library.
+    - The B.A.D. Chest logging can now read the labels of blueprint from the library.
+    - The B.A.D. Chest now uses the option to turn off the signal output for a separate wire when executing certain commands.
 ---------------------------------------------------------------------------------------------------
 Version: 1.4.18
 Date: 2026-05-05
