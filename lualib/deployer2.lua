@@ -591,9 +591,12 @@ function BAD_Chest:reset_IO()
     e.destroy()
     self.output_alt = nil
   end
-  local cb = self.entity.get_control_behavior()
-  if cb and cb.output_networks then
-    cb.output_networks = {red = true, green = true}
+  e = self.entity
+  if e and e.valid then
+    local cb = self.entity.get_control_behavior()
+    if cb and cb.output_networks then
+      cb.output_networks = {red = true, green = true}
+    end
   end
 end
 
