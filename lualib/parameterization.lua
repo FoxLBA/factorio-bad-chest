@@ -179,6 +179,9 @@ Controls.decider_conditions = function(value, p)
   for _, o in pairs(value.outputs) do
     replace_signal(o.signal, s)
   end
+  for _, o in pairs(value.else_outputs) do
+    replace_signal(o.signal, s)
+  end
 end
 
 --Constant combinator

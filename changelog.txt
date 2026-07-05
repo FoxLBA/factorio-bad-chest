@@ -1,4 +1,9 @@
 ---------------------------------------------------------------------------------------------------
+Version: 1.5.2
+Date: ????
+  Changes:
+    - Now blueprint parameterization (B.A.D. Chest's command #2) can handle constant combinator's "else output".
+---------------------------------------------------------------------------------------------------
 Version: 1.5.1
 Date: 2026-06-28
   Bugfixes:
@@ -95,7 +100,7 @@ Date: 2025-10-18
 Version: 1.4.8
 Date: 2025-08-13
   Changes:
-    - Blueprint parameterization (BAD Chest's command #2) now can handle station names, train schedules, c-comb groups and [space-age] signals with quality.
+    - Now blueprint parameterization (BAD Chest's command #2) can handle station names, train schedules, c-comb groups and [space-age] signals with quality.
 ---------------------------------------------------------------------------------------------------
 Version: 1.4.7
 Date: 2025-04-27
