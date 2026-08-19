@@ -1,6 +1,8 @@
 ---------------------------------------------------------------------------------------------------
 Version: 1.5.2
-Date: ????
+Date: 2026-08-19
+  Bugfixes:
+    - Fixed crash when using an empty blueprint book and not providing an index for it.
   Changes:
     - Now blueprint parameterization (B.A.D. Chest's command #2) can handle constant combinator's "else output".
 ---------------------------------------------------------------------------------------------------

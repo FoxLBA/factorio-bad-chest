@@ -124,7 +124,10 @@ function BAD_Chest:use_item(com)
       -- Pick active item from nested blueprint books if it is still a book.
       while bp.is_blueprint_book do
         if not bp.active_index then return end
-        bp = bp.get_inventory(defines.inventory.item_main)[bp.active_index]
+        local inventory = bp.get_inventory(defines.inventory.item_main)
+        if not inventory then return end
+        if (#inventory < 1) or (bp.active_index > #inventory) then return end -- empty book or index out of bound for some reason
+        bp = inventory[bp.active_index]
         if not bp.valid_for_read then return end
       end
     end
