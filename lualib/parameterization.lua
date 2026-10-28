@@ -229,9 +229,12 @@ local function parametric(signals, bp)
         if g.recipe then
           local p = s[g.recipe]
           if p and prototypes.recipe[p.name] then
-            if prototypes.entity[g.name].crafting_categories[prototypes.recipe[p.name].category] then
-              g.recipe = p.name
-              g.recipe_quality = p.quality or "normal"
+            for _, category in pairs(prototypes.recipe[p.name].categories) do
+              if prototypes.entity[g.name].crafting_categories[category] then
+                g.recipe = p.name
+                g.recipe_quality = p.quality or "normal"
+                break
+              end
             end
           end
         end
@@ -247,7 +250,7 @@ local function parametric(signals, bp)
           local rf = g.request_filters.sections
           if rf then
             for _, s1 in pairs(rf) do
-              if not s1.group then
+              if not s1.group and s1.filters then
                 for _, f in pairs(s1.filters) do
                   replace_filter(f, s)
                 end
